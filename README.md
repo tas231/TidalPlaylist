@@ -8,76 +8,57 @@ Built with Python, FastAPI, and `tidalapi`, with zero build-step requirements.
 
 ## ✨ Features
 
-- 🎧 **Read Playlists**: View all your personal TIDAL playlists, tracklists, album covers, explicit badges, track durations, and playlist total running time.
-- ➕ **Create Playlists**: Create new playlists with custom titles and descriptions.
-- ✏️ **Rename Playlists**: Quickly edit and rename existing playlists.
-- 📋 **Copy Tracks**: Select individual or multiple tracks and copy them from one playlist to another.
-- 🚚 **Move Tracks**: Seamlessly move tracks between playlists (adds to destination and deletes from source).
+- 🎧 **Read Playlists**: View all personal TIDAL playlists, tracklists, album covers, explicit badges, durations, and total running time.
+- ➕ **Create & Rename**: Add new playlists with descriptions or rename existing ones in-place.
+- 📋 **Copy & Move Tracks**: Copy or move selected tracks between playlists with multi-selection.
 - ⚡ **Auto-Split Playlists (> 99 Tracks)**:
-  - Automatically splits any playlist that has more than 99 tracks into multiple playlists of maximum 99 tracks each.
-  - Automatically names them with numerical suffixes: `[Playlist Name] 1`, `[Playlist Name] 2`, `[Playlist Name] 3`, etc.
-  - Automatically moves excess tracks from the original playlist into the newly created suffix playlists.
-- 🖥️ **Dual-Pane Web Interface**: Side-by-side playlist browser with track search, multi-selection, transfer buttons, and instant feedback.
-- ⌨️ **Full Command-Line Interface (CLI)**: Scriptable terminal commands for every operation.
-- 🔐 **Secure TIDAL OAuth2 Authentication**: Authenticates via TIDAL's official Device Code Authorization Grant. Your password is never stored or transmitted locally. Sessions are persisted and refreshed automatically.
+  - Automatically splits any playlist with > 99 tracks into chunks of max 99 tracks.
+  - Automatically names them with numerical suffixes: `[Name] 1`, `[Name] 2`, `[Name] 3`...
+  - Moves excess tracks seamlessly into the new suffix playlists.
+- 🔍 **Duplicate Finder & Cleaner**:
+  - Detects duplicate tracks (by exact TIDAL ID and fuzzy normalized Title + Artist matching).
+  - Highlights duplicates with warning badges and offers a 1-click duplicate cleaner (keeping the earliest added song).
+- 💾 **Backup & Export / Import**:
+  - Export playlists directly as **JSON** (full metadata), **CSV** (for spreadsheets or transfer tools), or **M3U8** (for media players / DJ software).
+  - Import playlists from JSON, CSV, or M3U files, automatically recreating them on TIDAL.
+- 🔀 **Playlist Merge & Cloud Shuffle**:
+  - Merge multiple playlists into a unified master playlist (with optional automatic deduplication).
+  - True cloud shuffle: randomize a playlist's order permanently on TIDAL.
+- 📊 **Sorting & Ordering**:
+  - Sort tracks by Title, Artist, Album, or Duration in ascending or descending order.
+  - One-click **"Save Order"** to make the sorted order permanent on TIDAL.
+- 🎧 **Audio Preview Player**:
+  - Play button on every track thumbnail with a sticky bottom preview bar, scrub bar, and 1-click fallback to the TIDAL web player.
+- 🖱️ **Drag & Drop**:
+  - Drag songs directly from Panel A to Panel B (and vice-versa) to copy or move them.
+- 🔎 **Integrated TIDAL Search**:
+  - Search the full TIDAL catalog across all artists, albums, and tracks directly within the app (shortcut: `Cmd+K` or `Ctrl+K`), with instant "+ Add to Panel A" / "+ Add to Panel B" buttons.
+- 🔐 **Secure TIDAL OAuth2 Authentication**:
+  - Connects using TIDAL's official Device Code authorization (`link.tidal.com`). No password stored locally. Sessions are persisted and refreshed automatically.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Launch the Web Application
+### 1. Launch on Mac
 
-Simply run:
+In Finder, simply **double-click** either:
+- **`Start.command`** (Recommended for Mac)
+- or **`Tidal Playlist Manager.app`**
 
+Or in Terminal:
 ```bash
 ./run.sh
 ```
 
-Or with python:
-
-```bash
-python3 main.py
-```
-
-This will automatically start the local web server at `http://127.0.0.1:8000` and open it in your browser.
+The local web server starts and your browser will open automatically at:
+👉 **`http://127.0.0.1:8000`**
 
 ### 2. Connect your TIDAL Account
 
-1. Click **Connect with TIDAL** in the web app or run:
-   ```bash
-   ./run.sh login
-   ```
-2. A verification code and link will be displayed (e.g. `https://link.tidal.com/XXXXX`).
-3. Open the link in your browser, log in to your TIDAL account, and approve access.
-4. The application will detect authorization automatically and display your playlists!
-
----
-
-## ⚡ Auto-Split Feature (Max 99 Tracks)
-
-When a playlist exceeds 99 tracks (common for car media systems, DJ hardware, or specific CD/device limitations):
-
-### In the Web UI:
-1. Select the playlist in Panel A or Panel B.
-2. If it has > 99 tracks, the **⚡ Split (>99)** button is highlighted.
-3. Click **⚡ Split (>99)** to open the split dialog.
-4. Review the plan:
-   - **Part 1**: Original playlist renamed to `[Name] 1` (keeps tracks 1 to 99).
-   - **Part 2**: New playlist created as `[Name] 2` (receives tracks 100 to 198).
-   - **Part 3**: New playlist created as `[Name] 3` (receives tracks 199 to end).
-5. Click **Start Auto-Split**. The playlists are created and tracks are moved automatically. Both parts are loaded side-by-side so you can review them immediately!
-
-### In the CLI:
-```bash
-# Split by playlist name or ID
-./run.sh split "My Road Trip"
-
-# Customize max track count if desired (default 99):
-./run.sh split "My Road Trip" --max-tracks 50
-
-# Keep original playlist name without adding suffix '1':
-./run.sh split "My Road Trip" --no-rename
-```
+1. Click **Connect with TIDAL**.
+2. Click the authorization link to approve the code in your browser.
+3. Once approved, the manager will instantly load your playlists side-by-side!
 
 ---
 
@@ -85,47 +66,28 @@ When a playlist exceeds 99 tracks (common for car media systems, DJ hardware, or
 
 | Command | Description | Example |
 |---|---|---|
-| `web` | Start the Web UI server | `./run.sh web --port 8080` |
+| `web` | Start the Web UI server | `./run.sh web --port 8000` |
 | `login` | Authenticate with TIDAL via OAuth | `./run.sh login` |
 | `status` | Check authentication status | `./run.sh status` |
 | `logout` | Log out and delete stored session | `./run.sh logout` |
 | `list` | List all user playlists | `./run.sh list` |
-| `show <playlist>` | View tracks in a playlist | `./run.sh show "Chill Vibes"` |
-| `create <title>` | Create a new playlist | `./run.sh create "Workout 2026" -d "Upbeat tracks"` |
-| `rename <pl> <new_title>` | Rename an existing playlist | `./run.sh rename "Workout" "Gym Bangers"` |
+| `show <pl>` | View tracks in a playlist | `./run.sh show "Chill Vibes"` |
+| `create <title>` | Create a new playlist | `./run.sh create "Workout" -d "High energy"` |
+| `rename <pl> <title>` | Rename an existing playlist | `./run.sh rename "Workout" "Gym Bangers"` |
 | `delete-playlist <pl>` | Delete a playlist | `./run.sh delete-playlist "Old Mix" -y` |
 | `copy` | Copy tracks between playlists | `./run.sh copy --from "Pop" --to "Best Of" --indices 0,1,2-5` |
 | `move` | Move tracks between playlists | `./run.sh move --from "Inbox" --to "Favorites" --indices 0,3` |
-| `split <playlist>` | Auto-split playlist (>99 tracks) | `./run.sh split "Massive Library"` |
-
----
-
-## 📂 Project Structure
-
-```
-TidalPlaylist/
-├── main.py                  # CLI and Web UI entry point
-├── run.sh                   # One-click startup script
-├── pyproject.toml           # Project dependencies & package metadata
-├── tidal_manager/
-│   ├── client.py            # TIDAL API client, OAuth, playlist & track logic
-│   ├── server.py            # FastAPI REST backend & static file router
-│   ├── cli.py               # CLI command parsers and table output
-│   ├── config.py            # Configuration & session file path
-│   └── static/              # Modern frontend
-│       ├── index.html       # Dual-pane UI layout & modals
-│       ├── app.js           # Multi-select, transfers, splitting, and live filters
-│       └── style.css        # TIDAL dark aesthetic & animations
-└── tests/
-    ├── test_client.py       # Client unit tests & splitting boundary tests
-    └── test_api.py          # FastAPI REST endpoint integration tests
-```
+| `split <pl>` | Auto-split playlist (>99 tracks) | `./run.sh split "Massive Library"` |
+| `duplicates <pl>` | Check or clean duplicates | `./run.sh duplicates "My Mix" --clean` |
+| `export <pl>` | Export playlist to file | `./run.sh export "Chill" -f csv` |
+| `import <file>` | Import playlist from file | `./run.sh import "chill_backup.json"` |
+| `merge` | Merge multiple playlists | `./run.sh merge --from "Rock,Indie" -t "Rock & Indie"` |
+| `shuffle <pl>` | Shuffle tracks on TIDAL | `./run.sh shuffle "Party Mix"` |
+| `search <query>` | Search TIDAL catalog | `./run.sh search "Daft Punk"` |
 
 ---
 
 ## 🧪 Running Tests
-
-To run the full unit and integration test suite:
 
 ```bash
 .venv/bin/python3 -m unittest discover -s tests

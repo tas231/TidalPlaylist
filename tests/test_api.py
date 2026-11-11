@@ -113,5 +113,27 @@ class TestApiEndpoints(unittest.TestCase):
         self.assertIn("Playlist Manager", res.text)
 
 
+    def test_duplicates_endpoint(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "find_duplicates", return_value={"duplicate_count": 1, "duplicate_indices": [2]}):
+            res = self.api_client.get("/api/playlists/p1/duplicates")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.json()["duplicate_count"], 1)
+
+    def test_export_endpoint(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "export_playlist", return_value=('{"test": 1}', "application/json", "test.json")):
+            res = self.api_client.get("/api/playlists/p1/export?format=json")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.headers["content-type"], "application/json")
+
+    def test_search_endpoint(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "search_catalog", return_value=[{"id": "123", "name": "Found Track"}]):
+            res = self.api_client.get("/api/search?q=test")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(len(res.json()), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

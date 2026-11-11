@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import math
 import os
+import random
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 import requests
 import tidalapi
@@ -83,7 +87,6 @@ class TidalClient:
         try:
             self.session_file.parent.mkdir(parents=True, exist_ok=True)
             self.session.save_session_to_file(self.session_file)
-            # Restrict permissions on session file (rw- --- ---)
             os.chmod(self.session_file, 0o600)
             return True
         except Exception as e:
@@ -135,7 +138,6 @@ class TidalClient:
             return {"status": "expired", "logged_in": False, "message": "Device login code expired"}
 
         try:
-            # Single non-blocking check
             url = self.session.config.api_oauth2_token
             params = {
                 "client_id": self.session.config.client_id,
@@ -148,7 +150,6 @@ class TidalClient:
             data = res.json()
 
             if res.ok:
-                # Login succeeded!
                 self.session.process_auth_token(data, is_pkce_token=False)
                 self.save_session()
                 self._current_link_login = None
@@ -246,6 +247,42 @@ class TidalClient:
             "created": str(getattr(pl, "created", "") or ""),
         }
 
+    def _format_track(self, idx: int, t: Any) -> Dict[str, Any]:
+        """Format a single Track object into dictionary."""
+        dur = getattr(t, "duration", 0) or 0
+        m = dur // 60
+        s = dur % 60
+
+        artist_name = "Unknown Artist"
+        if hasattr(t, "artist") and t.artist and hasattr(t.artist, "name"):
+            artist_name = t.artist.name
+        elif hasattr(t, "artists") and t.artists:
+            artist_name = ", ".join(a.name for a in t.artists if hasattr(a, "name"))
+
+        album_name = ""
+        album_img = ""
+        if hasattr(t, "album") and t.album:
+            album_name = getattr(t.album, "name", "") or ""
+            try:
+                if hasattr(t.album, "image"):
+                    album_img = t.album.image(dimensions=160) or ""
+            except Exception:
+                pass
+
+        return {
+            "index": idx,
+            "id": str(t.id),
+            "name": t.name,
+            "artist": artist_name,
+            "album": album_name,
+            "album_image": album_img,
+            "duration": dur,
+            "duration_formatted": f"{m}:{s:02d}",
+            "explicit": bool(getattr(t, "explicit", False)),
+            "isrc": getattr(t, "isrc", "") or "",
+            "audio_quality": getattr(t, "audio_quality", "LOSSLESS"),
+        }
+
     def list_playlists(self) -> List[Dict[str, Any]]:
         """List all personal playlists for the current user."""
         if not self.is_logged_in():
@@ -253,7 +290,6 @@ class TidalClient:
 
         raw_playlists = self.session.user.playlists()
         result = [self._format_playlist(p) for p in raw_playlists]
-        # Sort primarily by name
         result.sort(key=lambda x: (x["name"].lower() if x.get("name") else ""))
         return result
 
@@ -265,7 +301,6 @@ class TidalClient:
         try:
             pl = self.session.playlist(playlist_id)
             if not isinstance(pl, UserPlaylist):
-                # Try explicit UserPlaylist wrapping
                 pl = UserPlaylist(self.session, playlist_id)
             return pl
         except Exception as e:
@@ -276,45 +311,8 @@ class TidalClient:
         pl = self.get_playlist_obj(playlist_id)
         info = self._format_playlist(pl)
 
-        # Retrieve all tracks with pagination
         raw_tracks = pl.tracks_paginated() if hasattr(pl, "tracks_paginated") else pl.tracks()
-        tracks_formatted = []
-
-        for idx, t in enumerate(raw_tracks):
-            dur = getattr(t, "duration", 0) or 0
-            m = dur // 60
-            s = dur % 60
-
-            # Artist name
-            artist_name = "Unknown Artist"
-            if hasattr(t, "artist") and t.artist and hasattr(t.artist, "name"):
-                artist_name = t.artist.name
-            elif hasattr(t, "artists") and t.artists:
-                artist_name = ", ".join(a.name for a in t.artists if hasattr(a, "name"))
-
-            # Album name & image
-            album_name = ""
-            album_img = ""
-            if hasattr(t, "album") and t.album:
-                album_name = getattr(t.album, "name", "") or ""
-                try:
-                    if hasattr(t.album, "image"):
-                        album_img = t.album.image(dimensions=160) or ""
-                except Exception:
-                    pass
-
-            tracks_formatted.append({
-                "index": idx,
-                "id": str(t.id),
-                "name": t.name,
-                "artist": artist_name,
-                "album": album_name,
-                "album_image": album_img,
-                "duration": dur,
-                "duration_formatted": f"{m}:{s:02d}",
-                "explicit": bool(getattr(t, "explicit", False)),
-                "audio_quality": getattr(t, "audio_quality", "LOSSLESS"),
-            })
+        tracks_formatted = [self._format_track(idx, t) for idx, t in enumerate(raw_tracks)]
 
         info["tracks"] = tracks_formatted
         info["num_tracks"] = len(tracks_formatted)
@@ -323,24 +321,20 @@ class TidalClient:
     def resolve_playlist(self, identifier: str) -> UserPlaylist:
         """Resolve a playlist by UUID or case-insensitive title."""
         playlists = self.session.user.playlists()
-        # Direct ID match
         for p in playlists:
             if p.id == identifier:
                 return self.get_playlist_obj(p.id)
 
-        # Title match (case-insensitive)
         matches = [p for p in playlists if p.name and p.name.strip().lower() == identifier.strip().lower()]
         if len(matches) == 1:
             return self.get_playlist_obj(matches[0].id)
         elif len(matches) > 1:
             raise TidalManagerError(f"Multiple playlists found with name '{identifier}'. Please specify the playlist ID.")
 
-        # Partial title match
         partial = [p for p in playlists if p.name and identifier.strip().lower() in p.name.strip().lower()]
         if len(partial) == 1:
             return self.get_playlist_obj(partial[0].id)
 
-        # Fallback to direct ID
         return self.get_playlist_obj(identifier)
 
     # -------------------------------------------------------------------------
@@ -371,7 +365,6 @@ class TidalClient:
         if not success:
             raise TidalManagerError(f"Failed to rename playlist {playlist_id}")
 
-        # Reload updated object
         updated = self.get_playlist_obj(playlist_id)
         return self._format_playlist(updated)
 
@@ -396,7 +389,6 @@ class TidalClient:
     ) -> List[int]:
         """Add tracks to a playlist in safe chunks."""
         pl = self.get_playlist_obj(playlist_id)
-        # Fetch tracks to prime etag
         try:
             pl.tracks(limit=1)
         except Exception:
@@ -422,10 +414,7 @@ class TidalClient:
         if not sorted_indices:
             return True
 
-        # Refresh etag
         pl.tracks(limit=1)
-
-        # Try bulk delete first
         try:
             ok = pl.remove_by_indices(sorted_indices)
             if ok:
@@ -433,7 +422,6 @@ class TidalClient:
         except Exception as e:
             logger.warning("Bulk remove failed (%s), falling back to single-index deletion", e)
 
-        # Fallback: remove one by one in descending order so earlier indices remain valid
         for idx in sorted_indices:
             pl.tracks(limit=1)
             pl.remove_by_index(idx)
@@ -447,10 +435,8 @@ class TidalClient:
         if not str_ids:
             return True
 
-        # Fetch current tracklist
         all_tracks = pl.tracks_paginated() if hasattr(pl, "tracks_paginated") else pl.tracks()
         matching_indices = [idx for idx, t in enumerate(all_tracks) if str(t.id) in str_ids]
-
         if not matching_indices:
             return True
 
@@ -481,7 +467,7 @@ class TidalClient:
             raise TidalManagerError("No tracks specified to copy")
 
         if not selected_ids:
-            return {"copied": 0, "track_ids": []}
+            return {"copied_count": 0, "track_ids": []}
 
         added = self.add_tracks(to_playlist_id, selected_ids, allow_duplicates=allow_duplicates)
         return {
@@ -526,10 +512,7 @@ class TidalClient:
         if not selected_ids:
             return {"moved_count": 0, "track_ids": []}
 
-        # Step 1: Add to destination
         self.add_tracks(to_playlist_id, selected_ids, allow_duplicates=allow_duplicates)
-
-        # Step 2: Remove from source playlist by index
         self.remove_tracks_by_indices(from_playlist_id, target_indices)
 
         return {
@@ -550,14 +533,7 @@ class TidalClient:
         max_tracks: int = 99,
         rename_original: bool = True,
     ) -> Dict[str, Any]:
-        """
-        Split a playlist if it has more than `max_tracks` (default 99):
-        - Keeps the first `max_tracks` in the original playlist.
-        - Creates new playlists with the same name + suffix ('2', '3', etc.).
-        - Moves excess tracks to the corresponding new playlists.
-        - If rename_original is True, renames original to '[Name] 1'.
-        - Ensures every resulting playlist has at most `max_tracks`.
-        """
+        """Split a playlist into multiple playlists with suffix if it has > max_tracks."""
         if max_tracks < 1:
             raise TidalManagerError("max_tracks must be at least 1")
 
@@ -565,7 +541,6 @@ class TidalClient:
         original_name = pl.name.strip()
         original_desc = getattr(pl, "description", "") or ""
 
-        # Retrieve all tracks
         all_tracks = pl.tracks_paginated() if hasattr(pl, "tracks_paginated") else pl.tracks()
         total_tracks = len(all_tracks)
 
@@ -577,8 +552,6 @@ class TidalClient:
                 "playlists": [{"id": pl.id, "name": original_name, "tracks_count": total_tracks}],
             }
 
-        # Calculate base name without existing trailing numbers
-        # E.g. 'Chill Vibes 1' -> base 'Chill Vibes'
         match = re.match(r"^(.*?)(?:\s*[-_]?\s*(\d+))?$", original_name)
         if match and match.group(2):
             base_name = match.group(1).strip()
@@ -586,17 +559,8 @@ class TidalClient:
             base_name = original_name
 
         total_parts = math.ceil(total_tracks / max_tracks)
-        logger.info(
-            "Splitting playlist '%s' (%d tracks) into %d playlists (max %d each)...",
-            original_name,
-            total_tracks,
-            total_parts,
-            max_tracks,
-        )
-
         results = []
 
-        # Part 1: Stays in original playlist (tracks 0 to max_tracks - 1)
         part1_name = f"{base_name} 1" if rename_original else original_name
         if rename_original and original_name != part1_name:
             self.rename_playlist(playlist_id, part1_name, original_desc)
@@ -609,10 +573,8 @@ class TidalClient:
             "is_original": True,
         })
 
-        # All indices that need to be removed from original playlist
         indices_to_remove_from_original: List[int] = list(range(max_tracks, total_tracks))
 
-        # Create parts 2, 3, ...
         for part_num in range(2, total_parts + 1):
             start_idx = (part_num - 1) * max_tracks
             end_idx = min(part_num * max_tracks, total_tracks)
@@ -622,11 +584,9 @@ class TidalClient:
             part_name = f"{base_name} {part_num}"
             part_desc = f"{original_desc} (Part {part_num})".strip()
 
-            # Create new playlist
             new_pl_info = self.create_playlist(title=part_name, description=part_desc)
             new_id = new_pl_info["id"]
 
-            # Add tracks to the new playlist
             self.add_tracks(new_id, chunk_ids, allow_duplicates=True)
 
             results.append({
@@ -637,7 +597,6 @@ class TidalClient:
                 "is_original": False,
             })
 
-        # Remove the moved tracks from original playlist (descending)
         self.remove_tracks_by_indices(playlist_id, indices_to_remove_from_original)
 
         return {
@@ -649,4 +608,372 @@ class TidalClient:
             "max_per_playlist": max_tracks,
             "playlists": results,
             "message": f"Successfully split '{original_name}' into {total_parts} playlists with max {max_tracks} tracks each.",
+        }
+
+    # -------------------------------------------------------------------------
+    # 1. Duplicate Finder & Cleaner
+    # -------------------------------------------------------------------------
+
+    def _normalize_string(self, text: str) -> str:
+        """Normalize song title or artist for fuzzy duplicate comparison."""
+        if not text:
+            return ""
+        s = text.lower().strip()
+        # Remove text in parentheses/brackets like (Remastered 2021) or [Live]
+        s = re.sub(r"[\(\[].*?[\)\]]", "", s)
+        s = re.sub(r"[^\w\s]", "", s)
+        return " ".join(s.split())
+
+    def find_duplicates(self, playlist_id: str) -> Dict[str, Any]:
+        """Find duplicate tracks within a playlist by ID and Normalized Name + Artist."""
+        details = self.get_playlist_details(playlist_id)
+        tracks = details.get("tracks", [])
+
+        seen_ids: Dict[str, int] = {}
+        seen_normalized: Dict[str, int] = {}
+        duplicate_indices: Set[int] = set()
+        groups: Dict[str, List[Dict[str, Any]]] = {}
+
+        for t in tracks:
+            idx = t["index"]
+            tid = t["id"]
+            norm_key = f"{self._normalize_string(t['name'])} - {self._normalize_string(t['artist'])}"
+
+            is_dup = False
+            group_key = norm_key
+
+            if tid in seen_ids:
+                is_dup = True
+                duplicate_indices.add(idx)
+            else:
+                seen_ids[tid] = idx
+
+            if norm_key and norm_key in seen_normalized:
+                is_dup = True
+                duplicate_indices.add(idx)
+            elif norm_key:
+                seen_normalized[norm_key] = idx
+
+            if is_dup:
+                if group_key not in groups:
+                    first_idx = seen_normalized.get(group_key, seen_ids.get(tid))
+                    first_track = next((x for x in tracks if x["index"] == first_idx), None)
+                    groups[group_key] = [first_track] if first_track else []
+                groups[group_key].append(t)
+
+        formatted_groups = [
+            {"key": k, "tracks": v, "count": len(v)}
+            for k, v in groups.items()
+        ]
+
+        return {
+            "playlist_id": playlist_id,
+            "playlist_name": details.get("name"),
+            "total_tracks": len(tracks),
+            "duplicate_count": len(duplicate_indices),
+            "duplicate_indices": sorted(duplicate_indices),
+            "groups": formatted_groups,
+        }
+
+    def clean_duplicates(self, playlist_id: str) -> Dict[str, Any]:
+        """Remove duplicate tracks from a playlist, keeping the first occurrence."""
+        dup_info = self.find_duplicates(playlist_id)
+        dup_indices = dup_info["duplicate_indices"]
+
+        if not dup_indices:
+            return {
+                "success": True,
+                "removed_count": 0,
+                "message": "No duplicates found.",
+            }
+
+        self.remove_tracks_by_indices(playlist_id, dup_indices)
+        return {
+            "success": True,
+            "removed_count": len(dup_indices),
+            "message": f"Successfully removed {len(dup_indices)} duplicate track(s).",
+        }
+
+    # -------------------------------------------------------------------------
+    # 2. Backup & Export / Import
+    # -------------------------------------------------------------------------
+
+    def export_playlist(self, playlist_id: str, format_type: str = "json") -> Tuple[str, str, str]:
+        """
+        Export a playlist.
+        Returns (content_string, mime_type, filename).
+        """
+        details = self.get_playlist_details(playlist_id)
+        name = details.get("name", "playlist").replace("/", "_").replace("\\", "_")
+        tracks = details.get("tracks", [])
+
+        if format_type.lower() == "csv":
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Index", "Title", "Artist", "Album", "Duration_Seconds", "Duration", "Tidal_ID", "ISRC"])
+            for t in tracks:
+                writer.writerow([
+                    t["index"] + 1,
+                    t["name"],
+                    t["artist"],
+                    t["album"],
+                    t["duration"],
+                    t["duration_formatted"],
+                    t["id"],
+                    t.get("isrc", ""),
+                ])
+            return output.getvalue(), "text/csv", f"{name}.csv"
+
+        elif format_type.lower() == "m3u":
+            output = io.StringIO()
+            output.write("#EXTM3U\n")
+            for t in tracks:
+                output.write(f"#EXTINF:{t['duration']},{t['artist']} - {t['name']}\n")
+                output.write(f"#TIDAL-ID:{t['id']}\n")
+                output.write(f"https://listen.tidal.com/track/{t['id']}\n")
+            return output.getvalue(), "audio/x-mpegurl", f"{name}.m3u8"
+
+        else:
+            export_data = {
+                "app": "TIDAL Playlist Manager",
+                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "playlist": {
+                    "id": details.get("id"),
+                    "name": details.get("name"),
+                    "description": details.get("description"),
+                    "num_tracks": len(tracks),
+                    "duration": details.get("duration"),
+                    "duration_formatted": details.get("duration_formatted"),
+                },
+                "tracks": tracks,
+            }
+            return json.dumps(export_data, indent=2), "application/json", f"{name}.json"
+
+    def import_playlist(
+        self,
+        title: Optional[str],
+        file_content: str,
+        format_type: str = "auto",
+        description: str = "Imported via TIDAL Playlist Manager",
+    ) -> Dict[str, Any]:
+        """Import a playlist from JSON, CSV, or M3U."""
+        raw = file_content.strip()
+        track_ids: List[str] = []
+        parsed_title = title or "Imported Playlist"
+
+        if format_type == "auto":
+            if raw.startswith("{") or raw.startswith("["):
+                format_type = "json"
+            elif raw.startswith("#EXTM3U"):
+                format_type = "m3u"
+            else:
+                format_type = "csv"
+
+        if format_type == "json":
+            data = json.loads(raw)
+            if isinstance(data, dict):
+                parsed_title = title or data.get("playlist", {}).get("name") or data.get("title") or parsed_title
+                tracks = data.get("tracks", [])
+                for t in tracks:
+                    if isinstance(t, dict) and t.get("id"):
+                        track_ids.append(str(t["id"]))
+            elif isinstance(data, list):
+                for item in data:
+                    if isinstance(item, dict) and item.get("id"):
+                        track_ids.append(str(item["id"]))
+
+        elif format_type == "m3u":
+            lines = raw.splitlines()
+            for line in lines:
+                line = line.strip()
+                if line.startswith("#TIDAL-ID:"):
+                    tid = line.replace("#TIDAL-ID:", "").strip()
+                    if tid:
+                        track_ids.append(tid)
+                elif "listen.tidal.com/track/" in line:
+                    match = re.search(r"track/(\d+)", line)
+                    if match:
+                        track_ids.append(match.group(1))
+
+        elif format_type == "csv":
+            reader = csv.reader(io.StringIO(raw))
+            rows = list(reader)
+            if rows:
+                header = [h.strip().lower() for h in rows[0]]
+                id_col = -1
+                for candidate in ["tidal_id", "tidal id", "track_id", "id"]:
+                    if candidate in header:
+                        id_col = header.index(candidate)
+                        break
+
+                for row in rows[1:]:
+                    if id_col != -1 and len(row) > id_col and row[id_col].strip().isdigit():
+                        track_ids.append(row[id_col].strip())
+
+        if not track_ids:
+            raise TidalManagerError("No valid TIDAL track IDs could be found in the imported file.")
+
+        new_pl = self.create_playlist(title=parsed_title, description=description)
+        new_id = new_pl["id"]
+        self.add_tracks(new_id, track_ids, allow_duplicates=True)
+
+        return {
+            "success": True,
+            "playlist_id": new_id,
+            "title": parsed_title,
+            "imported_tracks_count": len(track_ids),
+        }
+
+    # -------------------------------------------------------------------------
+    # 3. Playlist Merge & Shuffle
+    # -------------------------------------------------------------------------
+
+    def merge_playlists(
+        self,
+        source_ids: Sequence[str],
+        target_title: str,
+        target_description: str = "",
+        deduplicate: bool = True,
+    ) -> Dict[str, Any]:
+        """Merge tracks from multiple source playlists into a new target playlist."""
+        if not source_ids:
+            raise TidalManagerError("Must specify at least one source playlist to merge.")
+
+        all_track_ids: List[str] = []
+        seen: Set[str] = set()
+
+        for pid in source_ids:
+            pl = self.get_playlist_obj(pid)
+            tracks = pl.tracks_paginated() if hasattr(pl, "tracks_paginated") else pl.tracks()
+            for t in tracks:
+                tid = str(t.id)
+                if deduplicate:
+                    if tid not in seen:
+                        seen.add(tid)
+                        all_track_ids.append(tid)
+                else:
+                    all_track_ids.append(tid)
+
+        if not all_track_ids:
+            raise TidalManagerError("Source playlists contain no tracks.")
+
+        new_pl = self.create_playlist(title=target_title, description=target_description)
+        self.add_tracks(new_pl["id"], all_track_ids, allow_duplicates=True)
+
+        return {
+            "success": True,
+            "merged_playlist_id": new_pl["id"],
+            "title": target_title,
+            "total_tracks": len(all_track_ids),
+            "sources_count": len(source_ids),
+        }
+
+    def shuffle_playlist(self, playlist_id: str) -> Dict[str, Any]:
+        """Shuffle a playlist on TIDAL into a randomized cloud order."""
+        pl = self.get_playlist_obj(playlist_id)
+        raw_tracks = pl.tracks_paginated() if hasattr(pl, "tracks_paginated") else pl.tracks()
+        track_ids = [str(t.id) for t in raw_tracks]
+
+        if len(track_ids) <= 1:
+            return {"success": True, "message": "Playlist has 1 or fewer tracks, no shuffle needed."}
+
+        random.shuffle(track_ids)
+
+        pl.clear()
+        self.add_tracks(playlist_id, track_ids, allow_duplicates=True)
+
+        return {
+            "success": True,
+            "shuffled_count": len(track_ids),
+            "message": f"Successfully shuffled {len(track_ids)} tracks in '{pl.name}'.",
+        }
+
+    # -------------------------------------------------------------------------
+    # 4. Sorting & Reordering
+    # -------------------------------------------------------------------------
+
+    def reorder_playlist_sorted(
+        self,
+        playlist_id: str,
+        sort_by: str = "title",
+        ascending: bool = True,
+    ) -> Dict[str, Any]:
+        """Permanently sort and save a playlist order on TIDAL."""
+        pl = self.get_playlist_obj(playlist_id)
+        raw_tracks = pl.tracks_paginated() if hasattr(pl, "tracks_paginated") else pl.tracks()
+        tracks_formatted = [self._format_track(i, t) for i, t in enumerate(raw_tracks)]
+
+        key_fn = lambda x: x["name"].lower()
+        if sort_by == "artist":
+            key_fn = lambda x: (x["artist"].lower(), x["name"].lower())
+        elif sort_by == "album":
+            key_fn = lambda x: (x["album"].lower(), x["name"].lower())
+        elif sort_by == "duration":
+            key_fn = lambda x: x["duration"]
+
+        tracks_formatted.sort(key=key_fn, reverse=not ascending)
+        sorted_ids = [t["id"] for t in tracks_formatted]
+
+        pl.clear()
+        self.add_tracks(playlist_id, sorted_ids, allow_duplicates=True)
+
+        return {
+            "success": True,
+            "sorted_by": sort_by,
+            "ascending": ascending,
+            "track_count": len(sorted_ids),
+            "message": f"Playlist sorted by {sort_by} ({'A-Z' if ascending else 'Z-A'}).",
+        }
+
+    # -------------------------------------------------------------------------
+    # 5. Audio Preview & 7. Catalog Search
+    # -------------------------------------------------------------------------
+
+    def search_catalog(self, query: str, limit: int = 30) -> List[Dict[str, Any]]:
+        """Search the TIDAL catalog for tracks."""
+        if not self.is_logged_in():
+            raise TidalAuthError("Not logged in to Tidal")
+
+        clean_q = (query or "").strip()
+        if not clean_q:
+            return []
+
+        res = self.session.search(query=clean_q, models=[tidalapi.media.Track], limit=limit)
+        tracks = res.get("tracks", []) if isinstance(res, dict) else getattr(res, "tracks", [])
+
+        results = []
+        for idx, t in enumerate(tracks):
+            results.append(self._format_track(idx, t))
+        return results
+
+    def get_track_preview(self, track_id: str) -> Dict[str, Any]:
+        """Retrieve direct audio stream URL or preview link for a track."""
+        if not self.is_logged_in():
+            raise TidalAuthError("Not logged in to Tidal")
+
+        track = self.session.track(track_id)
+        preview_url = None
+        try:
+            preview_url = track.get_url()
+        except Exception:
+            preview_url = None
+
+        artist_name = "Unknown Artist"
+        if hasattr(track, "artist") and track.artist and hasattr(track.artist, "name"):
+            artist_name = track.artist.name
+
+        album_img = ""
+        if hasattr(track, "album") and track.album and hasattr(track.album, "image"):
+            try:
+                album_img = track.album.image(dimensions=160)
+            except Exception:
+                pass
+
+        return {
+            "id": str(track_id),
+            "name": getattr(track, "name", ""),
+            "artist": artist_name,
+            "album_image": album_img,
+            "preview_url": preview_url,
+            "web_url": f"https://listen.tidal.com/track/{track_id}",
         }

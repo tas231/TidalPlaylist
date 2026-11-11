@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Global App Header -->
@@ -19,6 +19,13 @@
         </svg>
         <span class="logo-text">TIDAL <span class="logo-accent">Playlist Manager</span></span>
       </div>
+
+      <!-- Catalog Search Trigger in Header -->
+      <button id="btn-open-search" class="btn btn-search-trigger hidden" title="Search TIDAL Catalog">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search TIDAL Catalog...</span>
+        <kbd class="search-kbd">Cmd+K</kbd>
+      </button>
     </div>
     
     <div class="header-right">
@@ -28,15 +35,24 @@
         <span id="user-country" class="country-pill">US</span>
         <button id="btn-logout" class="btn btn-ghost btn-sm" title="Log Out">Log Out</button>
       </div>
-      
+
+      <button id="btn-merge-playlists" class="btn btn-outline btn-sm hidden" title="Merge playlists">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L20 4M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+        Merge
+      </button>
+
+      <button id="btn-import-playlist" class="btn btn-outline btn-sm hidden" title="Import playlist from JSON/CSV/M3U">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Import
+      </button>
+
       <button id="btn-new-playlist" class="btn btn-primary btn-sm hidden">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         New Playlist
       </button>
 
-      <button id="btn-refresh-all" class="btn btn-outline btn-sm hidden" title="Refresh all playlists">
+      <button id="btn-refresh-all" class="btn btn-icon btn-outline btn-sm hidden" title="Refresh all playlists">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Refresh
       </button>
     </div>
   </header>
@@ -53,7 +69,7 @@
           </svg>
         </div>
         <h2>Connect Your TIDAL Account</h2>
-        <p class="auth-desc">Authenticate directly via TIDAL OAuth. No password stored locally.</p>
+        <p class="auth-desc">Authenticate securely via TIDAL OAuth2 Device Authorization. No credentials stored locally.</p>
 
         <div id="login-initial-state">
           <button id="btn-start-login" class="btn btn-primary btn-lg">
@@ -95,7 +111,7 @@
       <div class="dual-manager">
 
         <!-- Left Playlist Pane (Pane A) -->
-        <div class="playlist-pane" id="pane-a">
+        <div class="playlist-pane drop-zone" id="pane-a" data-pane="paneA">
           <div class="pane-header">
             <div class="pane-title-row">
               <span class="pane-tag">PANEL A</span>
@@ -116,11 +132,20 @@
                     <button id="btn-split-a" class="btn btn-action-pill split-pill" title="Auto-Split (>99 tracks)">
                       ⚡ Split (&gt;99)
                     </button>
+                    <button id="btn-dup-a" class="btn btn-action-pill" title="Check for duplicates">
+                      🔍 Duplicates
+                    </button>
+                    <button id="btn-shuffle-a" class="btn btn-action-pill" title="Shuffle tracks">
+                      🔀 Shuffle
+                    </button>
+                    <button id="btn-export-a" class="btn btn-action-pill" title="Export / Backup playlist">
+                      💾 Export
+                    </button>
                     <button id="btn-rename-a" class="btn btn-action-pill" title="Rename Playlist">
-                      ✎ Rename
+                      ✎
                     </button>
                     <button id="btn-delete-a" class="btn btn-action-pill btn-danger-pill" title="Delete Playlist">
-                      🗑 Delete
+                      🗑
                     </button>
                   </div>
                 </div>
@@ -128,16 +153,35 @@
                 <div class="pl-stats">
                   <span id="badge-tracks-a" class="stat-badge">0 tracks</span>
                   <span id="badge-duration-a" class="stat-badge">0 min</span>
+                  <span id="badge-dup-a" class="stat-badge badge-dup hidden">0 dups</span>
                 </div>
               </div>
             </div>
 
-            <!-- Track Filter & Selection Bar -->
+            <!-- Track Filter & Sorting Bar -->
             <div class="track-toolbar">
               <div class="search-wrap">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="filter-a" placeholder="Filter tracks in Panel A..." class="filter-input">
+                <input type="text" id="filter-a" placeholder="Filter Panel A..." class="filter-input">
               </div>
+
+              <!-- Sorting Dropdown -->
+              <div class="sort-wrap">
+                <select id="sort-a" class="sort-select" title="Sort tracks">
+                  <option value="original">Order: Default</option>
+                  <option value="title">Title (A-Z)</option>
+                  <option value="artist">Artist (A-Z)</option>
+                  <option value="album">Album (A-Z)</option>
+                  <option value="duration">Duration</option>
+                </select>
+                <button id="btn-sort-dir-a" class="btn btn-icon btn-ghost btn-sm" title="Toggle Ascending/Descending">
+                  <span class="sort-dir-arrow">↑</span>
+                </button>
+                <button id="btn-save-sort-a" class="btn btn-action-pill btn-sm hidden" title="Save this sorted order permanently to TIDAL">
+                  Save Order
+                </button>
+              </div>
+
               <div class="selection-actions">
                 <label class="checkbox-label">
                   <input type="checkbox" id="select-all-a">
@@ -181,11 +225,13 @@
             <button id="btn-delete-selected" class="btn btn-transfer btn-transfer-delete" title="Remove selected tracks from active playlist">
               🗑 Remove Selected
             </button>
+
+            <div class="dnd-hint">💡 Drag & Drop songs directly across panels!</div>
           </div>
         </div>
 
         <!-- Right Playlist Pane (Pane B) -->
-        <div class="playlist-pane" id="pane-b">
+        <div class="playlist-pane drop-zone" id="pane-b" data-pane="paneB">
           <div class="pane-header">
             <div class="pane-title-row">
               <span class="pane-tag">PANEL B</span>
@@ -206,11 +252,20 @@
                     <button id="btn-split-b" class="btn btn-action-pill split-pill" title="Auto-Split (>99 tracks)">
                       ⚡ Split (&gt;99)
                     </button>
+                    <button id="btn-dup-b" class="btn btn-action-pill" title="Check for duplicates">
+                      🔍 Duplicates
+                    </button>
+                    <button id="btn-shuffle-b" class="btn btn-action-pill" title="Shuffle tracks">
+                      🔀 Shuffle
+                    </button>
+                    <button id="btn-export-b" class="btn btn-action-pill" title="Export / Backup playlist">
+                      💾 Export
+                    </button>
                     <button id="btn-rename-b" class="btn btn-action-pill" title="Rename Playlist">
-                      ✎ Rename
+                      ✎
                     </button>
                     <button id="btn-delete-b" class="btn btn-action-pill btn-danger-pill" title="Delete Playlist">
-                      🗑 Delete
+                      🗑
                     </button>
                   </div>
                 </div>
@@ -218,16 +273,35 @@
                 <div class="pl-stats">
                   <span id="badge-tracks-b" class="stat-badge">0 tracks</span>
                   <span id="badge-duration-b" class="stat-badge">0 min</span>
+                  <span id="badge-dup-b" class="stat-badge badge-dup hidden">0 dups</span>
                 </div>
               </div>
             </div>
 
-            <!-- Track Filter & Selection Bar -->
+            <!-- Track Filter & Sorting Bar -->
             <div class="track-toolbar">
               <div class="search-wrap">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="filter-b" placeholder="Filter tracks in Panel B..." class="filter-input">
+                <input type="text" id="filter-b" placeholder="Filter Panel B..." class="filter-input">
               </div>
+
+              <!-- Sorting Dropdown -->
+              <div class="sort-wrap">
+                <select id="sort-b" class="sort-select" title="Sort tracks">
+                  <option value="original">Order: Default</option>
+                  <option value="title">Title (A-Z)</option>
+                  <option value="artist">Artist (A-Z)</option>
+                  <option value="album">Album (A-Z)</option>
+                  <option value="duration">Duration</option>
+                </select>
+                <button id="btn-sort-dir-b" class="btn btn-icon btn-ghost btn-sm" title="Toggle Ascending/Descending">
+                  <span class="sort-dir-arrow">↑</span>
+                </button>
+                <button id="btn-save-sort-b" class="btn btn-action-pill btn-sm hidden" title="Save this sorted order permanently to TIDAL">
+                  Save Order
+                </button>
+              </div>
+
               <div class="selection-actions">
                 <label class="checkbox-label">
                   <input type="checkbox" id="select-all-b">
@@ -250,7 +324,175 @@
 
   </main>
 
+  <!-- Sticky Bottom Audio Preview Player -->
+  <footer id="audio-preview-bar" class="audio-bar hidden">
+    <div class="audio-track-info">
+      <img id="audio-thumb" src="" alt="Album Art" class="audio-thumb">
+      <div class="audio-titles">
+        <span id="audio-track-name" class="audio-name">Song Name</span>
+        <span id="audio-artist-name" class="audio-artist">Artist</span>
+      </div>
+    </div>
+
+    <div class="audio-player-controls">
+      <button id="btn-audio-play" class="btn-audio-control" title="Play/Pause">
+        <svg id="icon-play" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="icon-pause" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <div class="audio-scrub-wrap">
+        <span id="audio-current-time" class="time-label">0:00</span>
+        <div class="progress-bar-wrap" id="audio-seek-bar">
+          <div class="progress-bar-fill" id="audio-progress-fill"></div>
+        </div>
+        <span id="audio-duration-time" class="time-label">0:30</span>
+      </div>
+      <audio id="native-audio"></audio>
+    </div>
+
+    <div class="audio-actions">
+      <a id="audio-open-tidal" href="#" target="_blank" class="btn btn-ghost btn-sm" title="Open full track in TIDAL">
+        Open in TIDAL ↗
+      </a>
+      <button id="btn-audio-close" class="btn btn-icon btn-ghost" title="Close Preview Player">&times;</button>
+    </div>
+  </footer>
+
   <!-- Modals -->
+
+  <!-- Modal: TIDAL Catalog Search -->
+  <div id="modal-search" class="modal-overlay hidden">
+    <div class="modal-content modal-wide modal-tall">
+      <div class="modal-header">
+        <div class="search-input-header">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="catalog-search-input" class="search-hero-input" placeholder="Search TIDAL for tracks, artists, albums..." autofocus>
+        </div>
+        <button class="btn-close-modal" data-close="modal-search">&times;</button>
+      </div>
+      <div class="modal-body search-modal-body">
+        <div id="search-loading" class="search-loading hidden">
+          <div class="spinner"></div> Searching TIDAL catalog...
+        </div>
+        <div id="search-empty" class="search-empty">Type a song or artist name to search.</div>
+        <div id="search-results-list" class="search-results-list hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Duplicates Cleaner -->
+  <div id="modal-duplicates" class="modal-overlay hidden">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <div class="modal-title-with-badge">
+          <h3>🔍 Duplicates Cleaner</h3>
+          <span id="dup-badge-count" class="badge-accent">0 Duplicates</span>
+        </div>
+        <button class="btn-close-modal" data-close="modal-duplicates">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="dup-pl-id">
+        <p class="modal-intro">
+          The following tracks in <strong id="dup-target-name">Playlist</strong> appear multiple times (by exact ID or title & artist match):
+        </p>
+        <div id="duplicates-list" class="duplicates-list-container"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-duplicates">Cancel</button>
+        <button id="btn-submit-clean-dups" class="btn btn-danger">Remove All Duplicates</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Export Playlist -->
+  <div id="modal-export" class="modal-overlay hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h3>💾 Export Playlist Backup</h3>
+        <button class="btn-close-modal" data-close="modal-export">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="export-pl-id">
+        <p class="modal-intro">Choose an export format for <strong id="export-pl-name">Playlist</strong>:</p>
+        <div class="export-options">
+          <label class="radio-card">
+            <input type="radio" name="export-fmt" value="json" checked>
+            <div>
+              <strong>JSON Format (.json)</strong>
+              <p>Full backup with all metadata, IDs, track info, and durations.</p>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="export-fmt" value="csv">
+            <div>
+              <strong>CSV Spreadsheet (.csv)</strong>
+              <p>Standard table for Excel, Numbers, or Spotify converters.</p>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="export-fmt" value="m3u">
+            <div>
+              <strong>M3U8 Playlist (.m3u8)</strong>
+              <p>Compatible with VLC, media players, and DJ software.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-export">Cancel</button>
+        <button id="btn-submit-export" class="btn btn-cyan">Download File</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Import Playlist -->
+  <div id="modal-import" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📥 Import Playlist Backup</h3>
+        <button class="btn-close-modal" data-close="modal-import">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" for="import-title">Playlist Title (Optional)</label>
+        <input type="text" id="import-title" class="form-input" placeholder="Defaults to file name or internal title">
+
+        <label class="form-label" for="import-file">Upload JSON, CSV, or M3U file</label>
+        <input type="file" id="import-file" class="form-input file-input" accept=".json,.csv,.m3u,.m3u8">
+
+        <div class="divider-text">OR PASTE RAW CONTENT</div>
+        <textarea id="import-text" class="form-textarea" placeholder="Paste JSON, CSV, or M3U content here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-import">Cancel</button>
+        <button id="btn-submit-import" class="btn btn-primary">Start Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Merge Playlists -->
+  <div id="modal-merge" class="modal-overlay hidden">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <h3>🔀 Merge Multiple Playlists</h3>
+        <button class="btn-close-modal" data-close="modal-merge">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Select Playlists to Merge:</label>
+        <div id="merge-playlist-checklist" class="checklist-container"></div>
+
+        <label class="form-label" for="merge-target-title">New Merged Playlist Title *</label>
+        <input type="text" id="merge-target-title" class="form-input" placeholder="e.g. Master Collection" required>
+
+        <label class="checkbox-label" style="margin-top: 10px;">
+          <input type="checkbox" id="merge-dedupe" checked>
+          <span>Automatically remove duplicate tracks across playlists</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-merge">Cancel</button>
+        <button id="btn-submit-merge" class="btn btn-primary">Merge Playlists</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Create New Playlist -->
   <div id="modal-create" class="modal-overlay hidden">
@@ -336,9 +578,7 @@
           <p class="opt-desc">Subsequent playlists will be created as <strong><span id="split-preview-next">Name 2, Name 3...</span></strong> and excess tracks moved into them.</p>
         </div>
 
-        <div id="split-preview-list" class="split-preview-cards">
-          <!-- Dynamic cards showing planned parts -->
-        </div>
+        <div id="split-preview-list" class="split-preview-cards"></div>
 
         <div id="split-in-progress" class="split-progress hidden">
           <div class="spinner"></div>

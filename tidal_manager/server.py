@@ -4,9 +4,9 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -15,8 +15,8 @@ from tidal_manager.config import BASE_DIR
 
 app = FastAPI(
     title="TIDAL Playlist Manager API",
-    version="1.0.0",
-    description="REST API for managing Tidal playlists, moving/copying tracks, and splitting playlists.",
+    version="1.1.0",
+    description="REST API for managing Tidal playlists, moving/copying tracks, splitting, merging, duplicates cleaning, and catalog search.",
 )
 
 # Allow CORS for development if needed
@@ -63,6 +63,37 @@ class SplitPlaylistRequest(BaseModel):
     rename_original: Optional[bool] = Field(True, description="Whether to rename original playlist to '[Name] 1'")
 
 
+class MergePlaylistsRequest(BaseModel):
+    source_ids: List[str] = Field(..., min_items=1, description="List of source playlist IDs to merge")
+    target_title: str = Field(..., min_length=1, description="Title of merged playlist")
+    target_description: Optional[str] = Field("", description="Description of merged playlist")
+    deduplicate: Optional[bool] = Field(True, description="Remove duplicate tracks during merge")
+
+
+class SortPlaylistRequest(BaseModel):
+    sort_by: str = Field("title", description="Sort by 'title', 'artist', 'album', or 'duration'")
+    ascending: Optional[bool] = Field(True, description="Sort ascending (A-Z) or descending (Z-A)")
+
+
+class ImportPlaylistRequest(BaseModel):
+    title: Optional[str] = Field(None, description="Playlist title override")
+    content: str = Field(..., description="Raw text of JSON, CSV, or M3U file")
+    format_type: Optional[str] = Field("auto", description="'auto', 'json', 'csv', or 'm3u'")
+    description: Optional[str] = Field("Imported via TIDAL Playlist Manager", description="Playlist description")
+
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+def ensure_authenticated():
+    if not client.is_logged_in():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated with Tidal. Please log in first.",
+        )
+
+
 # -----------------------------------------------------------------------------
 # Authentication Routes
 # -----------------------------------------------------------------------------
@@ -104,16 +135,8 @@ def logout():
 
 
 # -----------------------------------------------------------------------------
-# Playlist Routes
+# Playlist Basic CRUD Routes
 # -----------------------------------------------------------------------------
-
-def ensure_authenticated():
-    if not client.is_logged_in():
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated with Tidal. Please log in first.",
-        )
-
 
 @app.get("/api/playlists")
 def list_playlists():
@@ -193,7 +216,7 @@ def copy_tracks(payload: TrackOperationRequest):
 
 @app.post("/api/playlists/move")
 def move_tracks(payload: TrackOperationRequest):
-    """Move selected tracks from one playlist to another (adds to destination, removes from source)."""
+    """Move selected tracks from one playlist to another."""
     ensure_authenticated()
     try:
         return client.move_tracks(
@@ -212,9 +235,9 @@ def remove_tracks(playlist_id: str, payload: RemoveTracksRequest):
     """Remove tracks by indices or track IDs."""
     ensure_authenticated()
     try:
-        if payload.indices:
+        if payload.indices is not None and len(payload.indices) > 0:
             client.remove_tracks_by_indices(playlist_id, payload.indices)
-        elif payload.track_ids:
+        elif payload.track_ids is not None and len(payload.track_ids) > 0:
             client.remove_tracks_by_ids(playlist_id, payload.track_ids)
         else:
             raise HTTPException(status_code=400, detail="Must provide indices or track_ids")
@@ -225,10 +248,7 @@ def remove_tracks(playlist_id: str, payload: RemoveTracksRequest):
 
 @app.post("/api/playlists/{playlist_id}/split")
 def split_playlist(playlist_id: str, payload: SplitPlaylistRequest):
-    """
-    Split a playlist with > 99 tracks into chunks of max 99 tracks,
-    creating playlists with suffix 1, 2, 3... and moving tracks.
-    """
+    """Split a playlist into chunks of max 99 tracks with numerical suffixes."""
     ensure_authenticated()
     try:
         max_tracks = payload.max_tracks or 99
@@ -239,6 +259,135 @@ def split_playlist(playlist_id: str, payload: SplitPlaylistRequest):
             rename_original=rename_original,
         )
         return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# 1. Duplicate Finder & Cleaner Routes
+# -----------------------------------------------------------------------------
+
+@app.get("/api/playlists/{playlist_id}/duplicates")
+def get_duplicates(playlist_id: str):
+    """Find duplicate tracks in a playlist."""
+    ensure_authenticated()
+    try:
+        return client.find_duplicates(playlist_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/playlists/{playlist_id}/duplicates/clean")
+def clean_duplicates(playlist_id: str):
+    """Remove duplicate tracks in a playlist, keeping the first occurrence."""
+    ensure_authenticated()
+    try:
+        return client.clean_duplicates(playlist_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# 2. Backup & Export / Import Routes
+# -----------------------------------------------------------------------------
+
+@app.get("/api/playlists/{playlist_id}/export")
+def export_playlist(playlist_id: str, format: str = Query("json", pattern="^(json|csv|m3u)$")):
+    """Download a playlist backup as JSON, CSV, or M3U."""
+    ensure_authenticated()
+    try:
+        content, mime, filename = client.export_playlist(playlist_id, format_type=format)
+        return Response(
+            content=content,
+            media_type=mime,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/playlists/import")
+def import_playlist(payload: ImportPlaylistRequest):
+    """Import a playlist from uploaded JSON, CSV, or M3U content."""
+    ensure_authenticated()
+    try:
+        return client.import_playlist(
+            title=payload.title,
+            file_content=payload.content,
+            format_type=payload.format_type or "auto",
+            description=payload.description or "Imported via TIDAL Playlist Manager",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# 3. Merge & Shuffle Routes
+# -----------------------------------------------------------------------------
+
+@app.post("/api/playlists/merge")
+def merge_playlists(payload: MergePlaylistsRequest):
+    """Merge multiple playlists into a new playlist."""
+    ensure_authenticated()
+    try:
+        return client.merge_playlists(
+            source_ids=payload.source_ids,
+            target_title=payload.target_title,
+            target_description=payload.target_description or "",
+            deduplicate=payload.deduplicate if payload.deduplicate is not None else True,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/playlists/{playlist_id}/shuffle")
+def shuffle_playlist(playlist_id: str):
+    """Shuffle playlist tracks in random cloud order."""
+    ensure_authenticated()
+    try:
+        return client.shuffle_playlist(playlist_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# 4. Sorting & Reordering Routes
+# -----------------------------------------------------------------------------
+
+@app.post("/api/playlists/{playlist_id}/sort")
+def sort_playlist(playlist_id: str, payload: SortPlaylistRequest):
+    """Permanently sort playlist on TIDAL."""
+    ensure_authenticated()
+    try:
+        return client.reorder_playlist_sorted(
+            playlist_id=playlist_id,
+            sort_by=payload.sort_by,
+            ascending=payload.ascending if payload.ascending is not None else True,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# 5. Audio Preview & 7. Catalog Search Routes
+# -----------------------------------------------------------------------------
+
+@app.get("/api/search")
+def search_catalog(q: str = Query(..., min_length=1), limit: int = Query(30, ge=1, le=100)):
+    """Search TIDAL catalog for tracks."""
+    ensure_authenticated()
+    try:
+        return client.search_catalog(query=q, limit=limit)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/tracks/{track_id}/preview")
+def get_track_preview(track_id: str):
+    """Get direct audio stream URL or preview link for a track."""
+    ensure_authenticated()
+    try:
+        return client.get_track_preview(track_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

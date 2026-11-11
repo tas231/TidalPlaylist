@@ -207,5 +207,80 @@ class TestTidalClient(unittest.TestCase):
         self.assertEqual(res["name"], "New Name")
 
 
+    def test_find_and_clean_duplicates(self):
+        # 4 tracks, where track 0 and 2 are duplicate IDs, and track 1 and 3 are normalized duplicates
+        t0 = DummyTrack(10, "Blinding Lights", "The Weeknd")
+        t1 = DummyTrack(20, "Starboy", "The Weeknd")
+        t2 = DummyTrack(10, "Blinding Lights", "The Weeknd") # Exact ID dup
+        t3 = DummyTrack(30, "Starboy (Radio Edit)", "The Weeknd") # Fuzzy name dup
+
+        dummy_pl = DummyPlaylist("pl-dup", "My Playlist", [t0, t1, t2, t3])
+        self.client.get_playlist_obj = MagicMock(return_value=dummy_pl)
+
+        dup_info = self.client.find_duplicates("pl-dup")
+        self.assertEqual(dup_info["duplicate_count"], 2)
+        self.assertIn(2, dup_info["duplicate_indices"])
+        self.assertIn(3, dup_info["duplicate_indices"])
+
+        clean_res = self.client.clean_duplicates("pl-dup")
+        self.assertTrue(clean_res["success"])
+        self.assertEqual(clean_res["removed_count"], 2)
+        # 2 tracks should remain: indices 0 and 1
+        self.assertEqual(len(dummy_pl._tracks), 2)
+        self.assertEqual(dummy_pl._tracks[0].id, 10)
+        self.assertEqual(dummy_pl._tracks[1].id, 20)
+
+    def test_export_and_import_json(self):
+        t0 = DummyTrack(101, "Song A", "Artist A", 200)
+        t1 = DummyTrack(102, "Song B", "Artist B", 180)
+        dummy_pl = DummyPlaylist("pl-exp", "Export Test", [t0, t1], "Description")
+        self.client.get_playlist_obj = MagicMock(return_value=dummy_pl)
+
+        # Export JSON
+        content, mime, filename = self.client.export_playlist("pl-exp", "json")
+        self.assertEqual(mime, "application/json")
+        self.assertIn("Export Test", content)
+        self.assertIn("Song A", content)
+
+        # Import JSON
+        created_pl = DummyPlaylist("pl-imp", "Imported", [])
+        self.client.create_playlist = MagicMock(return_value={"id": "pl-imp", "name": "Imported"})
+        self.client.add_tracks = MagicMock(return_value=[101, 102])
+
+        imp_res = self.client.import_playlist("Imported", content, "json")
+        self.assertTrue(imp_res["success"])
+        self.assertEqual(imp_res["imported_tracks_count"], 2)
+
+    def test_merge_playlists(self):
+        t1 = DummyTrack(1, "Track 1")
+        t2 = DummyTrack(2, "Track 2")
+        t3 = DummyTrack(2, "Track 2") # dup
+        t4 = DummyTrack(3, "Track 3")
+
+        pl1 = DummyPlaylist("p1", "Part 1", [t1, t2])
+        pl2 = DummyPlaylist("p2", "Part 2", [t3, t4])
+
+        self.client.get_playlist_obj = lambda pid: pl1 if pid == "p1" else pl2
+        self.client.create_playlist = MagicMock(return_value={"id": "merged", "name": "Merged"})
+        self.client.add_tracks = MagicMock(return_value=[1, 2, 3])
+
+        res = self.client.merge_playlists(["p1", "p2"], "Merged", deduplicate=True)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["total_tracks"], 3) # 1, 2, 3
+
+    def test_shuffle_playlist(self):
+        tracks = [DummyTrack(i, f"Track {i}") for i in range(10)]
+        dummy_pl = DummyPlaylist("pl-shuf", "Shuffle Me", tracks)
+        dummy_pl.clear = MagicMock(side_effect=lambda: setattr(dummy_pl, "_tracks", []))
+        self.client.get_playlist_obj = MagicMock(return_value=dummy_pl)
+        self.client.add_tracks = MagicMock()
+
+        res = self.client.shuffle_playlist("pl-shuf")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["shuffled_count"], 10)
+        self.assertTrue(dummy_pl.clear.called)
+        self.assertTrue(self.client.add_tracks.called)
+
+
 if __name__ == "__main__":
     unittest.main()

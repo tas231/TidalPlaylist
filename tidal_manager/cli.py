@@ -1,9 +1,10 @@
-"""Command-Line Interface for Tidal Playlist Manager."""
+"""Command-Line Interface for Tidal Playlist Manager v1.1."""
 
 import argparse
 import sys
 import time
 import webbrowser
+from pathlib import Path
 from typing import List, Optional
 
 from tidal_manager.client import TidalAuthError, TidalClient, TidalManagerError
@@ -43,7 +44,6 @@ def cmd_login(args: argparse.Namespace) -> None:
     print("=" * 60)
     print("\nWaiting for confirmation in browser (expires in 5 minutes)...")
 
-    # Optionally attempt to open browser automatically
     try:
         webbrowser.open(login_info["verification_url"])
     except Exception:
@@ -202,7 +202,7 @@ def parse_indices(indices_str: Optional[str]) -> List[int]:
 
 
 def cmd_copy(args: argparse.Namespace) -> None:
-    """Copy tracks from source to destination playlist."""
+    """Copy tracks between playlists."""
     client = TidalClient()
     try:
         src = client.resolve_playlist(args.from_playlist)
@@ -224,7 +224,7 @@ def cmd_copy(args: argparse.Namespace) -> None:
 
 
 def cmd_move(args: argparse.Namespace) -> None:
-    """Move tracks from source to destination playlist."""
+    """Move tracks between playlists."""
     client = TidalClient()
     try:
         src = client.resolve_playlist(args.from_playlist)
@@ -246,9 +246,7 @@ def cmd_move(args: argparse.Namespace) -> None:
 
 
 def cmd_split(args: argparse.Namespace) -> None:
-    """
-    Split a playlist with > 99 tracks into multiple playlists of max 99 tracks each.
-    """
+    """Auto-split playlist with >99 tracks into 99-track playlists with suffix."""
     client = TidalClient()
     try:
         pl = client.resolve_playlist(args.playlist)
@@ -285,6 +283,120 @@ def cmd_split(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_duplicates(args: argparse.Namespace) -> None:
+    """Check for or clean duplicate tracks in a playlist."""
+    client = TidalClient()
+    try:
+        pl = client.resolve_playlist(args.playlist)
+        if args.clean:
+            res = client.clean_duplicates(pl.id)
+            print(f"[SUCCESS] {res['message']}")
+        else:
+            data = client.find_duplicates(pl.id)
+            print(f"\nPlaylist: {data['playlist_name']} ({data['total_tracks']} tracks)")
+            print(f"Duplicates Found: {data['duplicate_count']}\n")
+            if data["duplicate_count"] == 0:
+                print("✨ No duplicates found.")
+            else:
+                for grp in data["groups"]:
+                    print(f"• {grp['key']} ({grp['count']} copies):")
+                    for t in grp["tracks"]:
+                        print(f"    - Index {t['index'] + 1}: {t['name']} ({t['duration_formatted']})")
+                print("\nTo remove these duplicates, run:")
+                print(f"  python main.py duplicates '{args.playlist}' --clean")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
+def cmd_export(args: argparse.Namespace) -> None:
+    """Export a playlist backup to a file."""
+    client = TidalClient()
+    try:
+        pl = client.resolve_playlist(args.playlist)
+        content, mime, default_filename = client.export_playlist(pl.id, format_type=args.format)
+        out_path = Path(args.output or default_filename)
+        out_path.write_text(content, encoding="utf-8")
+        print(f"[SUCCESS] Exported playlist '{pl.name}' ({args.format.upper()}) to: {out_path.resolve()}")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
+def cmd_import(args: argparse.Namespace) -> None:
+    """Import a playlist from a JSON, CSV, or M3U file."""
+    client = TidalClient()
+    try:
+        in_path = Path(args.file)
+        if not in_path.exists():
+            print(f"[ERROR] File not found: {in_path}")
+            sys.exit(1)
+
+        content = in_path.read_text(encoding="utf-8")
+        title = args.title or in_path.stem
+        res = client.import_playlist(title=title, file_content=content, format_type="auto")
+        print(f"[SUCCESS] Imported playlist '{res['title']}' with {res['imported_tracks_count']} tracks (ID: {res['playlist_id']})")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
+def cmd_merge(args: argparse.Namespace) -> None:
+    """Merge multiple playlists into a new playlist."""
+    client = TidalClient()
+    try:
+        source_names = [s.strip() for s in args.from_playlists.split(",") if s.strip()]
+        source_ids = []
+        for name in source_names:
+            p = client.resolve_playlist(name)
+            source_ids.append(p.id)
+
+        res = client.merge_playlists(
+            source_ids=source_ids,
+            target_title=args.title,
+            deduplicate=not args.no_dedupe,
+        )
+        print(f"[SUCCESS] Merged {res['sources_count']} playlists into '{res['title']}' ({res['total_tracks']} tracks)")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
+def cmd_shuffle(args: argparse.Namespace) -> None:
+    """Shuffle playlist tracks in TIDAL."""
+    client = TidalClient()
+    try:
+        pl = client.resolve_playlist(args.playlist)
+        res = client.shuffle_playlist(pl.id)
+        print(f"[SUCCESS] {res['message']}")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
+def cmd_search(args: argparse.Namespace) -> None:
+    """Search the TIDAL catalog."""
+    client = TidalClient()
+    try:
+        tracks = client.search_catalog(query=args.query, limit=args.limit)
+        print(f"\nSearch results for: '{args.query}' ({len(tracks)} tracks)\n")
+        headers = ["ID", "Title", "Artist", "Album", "Duration"]
+        rows = [
+            [
+                t["id"],
+                t["name"] + (" [E]" if t["explicit"] else ""),
+                t["artist"],
+                t["album"],
+                t["duration_formatted"],
+            ]
+            for t in tracks
+        ]
+        print(format_table(headers, rows))
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
 def cmd_web(args: argparse.Namespace) -> None:
     """Launch the Web UI server."""
     import uvicorn
@@ -295,7 +407,7 @@ def cmd_web(args: argparse.Namespace) -> None:
     url = f"http://{host}:{port}"
 
     print(f"\n=======================================================")
-    print(f"  TIDAL Playlist Manager Web UI")
+    print(f"  TIDAL Playlist Manager Web UI v1.1")
     print(f"  Running at: {url}")
     print(f"  Press Ctrl+C to stop the server.")
     print(f"=======================================================\n")
@@ -313,7 +425,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="tidal-manager",
-        description="TIDAL Playlist Manager - Read, create, rename playlists, move/copy tracks, and auto-split playlists.",
+        description="TIDAL Playlist Manager - Read, create, rename, duplicate check, export/import, merge, shuffle, and auto-split playlists.",
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -387,13 +499,49 @@ def build_parser() -> argparse.ArgumentParser:
     p_split.add_argument("--no-rename", action="store_true", help="Do not rename original playlist to '[Name] 1'")
     p_split.set_defaults(func=cmd_split)
 
+    # duplicates
+    p_dup = subparsers.add_parser("duplicates", help="Find or remove duplicate tracks in a playlist")
+    p_dup.add_argument("playlist", help="Playlist ID or Title")
+    p_dup.add_argument("--clean", action="store_true", help="Automatically remove duplicate tracks")
+    p_dup.set_defaults(func=cmd_duplicates)
+
+    # export
+    p_exp = subparsers.add_parser("export", help="Export playlist to JSON, CSV, or M3U file")
+    p_exp.add_argument("playlist", help="Playlist ID or Title")
+    p_exp.add_argument("--format", "-f", choices=["json", "csv", "m3u"], default="json", help="Export format")
+    p_exp.add_argument("--output", "-o", help="Output file path")
+    p_exp.set_defaults(func=cmd_export)
+
+    # import
+    p_imp = subparsers.add_parser("import", help="Import playlist from JSON, CSV, or M3U file")
+    p_imp.add_argument("file", help="File path to import")
+    p_imp.add_argument("--title", "-t", help="Optional new playlist title")
+    p_imp.set_defaults(func=cmd_import)
+
+    # merge
+    p_mrg = subparsers.add_parser("merge", help="Merge multiple playlists into a new playlist")
+    p_mrg.add_argument("--from", dest="from_playlists", required=True, help="Comma-separated playlist IDs or names")
+    p_mrg.add_argument("--title", "-t", required=True, help="Title of new merged playlist")
+    p_mrg.add_argument("--no-dedupe", action="store_true", help="Do not deduplicate songs during merge")
+    p_mrg.set_defaults(func=cmd_merge)
+
+    # shuffle
+    p_shuf = subparsers.add_parser("shuffle", help="Shuffle tracks of a playlist in TIDAL")
+    p_shuf.add_argument("playlist", help="Playlist ID or Title")
+    p_shuf.set_defaults(func=cmd_shuffle)
+
+    # search
+    p_srch = subparsers.add_parser("search", help="Search the TIDAL catalog for tracks")
+    p_srch.add_argument("query", help="Search keywords (title, artist)")
+    p_srch.add_argument("--limit", "-l", type=int, default=20, help="Max results (default: 20)")
+    p_srch.set_defaults(func=cmd_search)
+
     return parser
 
 
 def main() -> None:
     parser = build_parser()
     if len(sys.argv) == 1:
-        # Default behavior with no arguments: launch Web UI
         cmd_web(argparse.Namespace(host=DEFAULT_HOST, port=DEFAULT_PORT, no_open=False))
         return
 
