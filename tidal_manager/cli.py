@@ -418,7 +418,7 @@ def cmd_web(args: argparse.Namespace) -> None:
         except Exception:
             pass
 
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run("tidal_manager.server:app", host=host, port=port, reload=True, log_level="info")
 
 
 def build_parser() -> argparse.ArgumentParser:

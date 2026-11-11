@@ -527,18 +527,22 @@ function applySortingAndFilter(paneKey) {
 
   // 2. Sort
   if (pState.sortBy !== "original") {
-    const key = pState.sortBy;
+    let key = pState.sortBy;
+    if (key === "title") key = "name";
     const asc = pState.sortAscending;
 
     list.sort((a, b) => {
-      let valA = a[key] || "";
-      let valB = b[key] || "";
-      if (typeof valA === "string") valA = valA.toLowerCase();
-      if (typeof valB === "string") valB = valB.toLowerCase();
+      let valA = a[key] !== undefined ? a[key] : (a.name || "");
+      let valB = b[key] !== undefined ? b[key] : (b.name || "");
 
-      if (valA < valB) return asc ? -1 : 1;
-      if (valA > valB) return asc ? 1 : -1;
-      return 0;
+      if (typeof valA === "number" && typeof valB === "number") {
+        return asc ? valA - valB : valB - valA;
+      }
+
+      valA = String(valA || "").trim();
+      valB = String(valB || "").trim();
+      const cmp = valA.localeCompare(valB, undefined, { sensitivity: "base", numeric: true });
+      return asc ? cmp : -cmp;
     });
   }
 
@@ -629,10 +633,11 @@ function renderTracksList(paneKey) {
   emptyEl.classList.add("hidden");
   listEl.classList.remove("hidden");
 
-  pState.filteredTracks.forEach((t) => {
+  pState.filteredTracks.forEach((t, displayIdx) => {
     const isSelected = pState.selectedIndices.has(t.index);
     const isDup = pState.duplicateIndices.has(t.index);
     const isPlaying = state.audioPlayer.activeTrackId === String(t.id) && state.audioPlayer.isPlaying;
+    const rowNum = pState.sortBy === "original" ? (t.index + 1) : (displayIdx + 1);
 
     const row = document.createElement("div");
     row.className = `track-row ${isSelected ? "selected" : ""} ${isDup ? "is-duplicate" : ""}`;
@@ -642,7 +647,7 @@ function renderTracksList(paneKey) {
 
     row.innerHTML = `
       <input type="checkbox" ${isSelected ? "checked" : ""} class="track-checkbox">
-      <span class="track-idx">${t.index + 1}</span>
+      <span class="track-idx">${rowNum}</span>
       <div class="thumb-wrap ${isPlaying ? "playing" : ""}" data-track-id="${t.id}" title="Play preview">
         <img src="${t.album_image || ''}" class="track-thumb" onerror="this.style.display='none'">
         <div class="play-overlay">

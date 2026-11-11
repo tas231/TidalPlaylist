@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-11-11
+
+### Fixed
+- **Title Sorting**: Fixed property name mapping (`title` -> `name`) in client-side sort algorithm so sorting by Title (A-Z) operates correctly. Added `localeCompare` for international/accented titles.
+- **Dynamic Row Indexing**: When sorted, row numbering reflects the current sorted positions (1, 2, 3...) instead of raw playlist indices.
+- **Server Auto-Reload**: Configured uvicorn with `reload=True` to prevent stale Python server processes after updates.
+- **Duplicates Endpoint**: Resolved 404 error caused by stale server instance running prior to endpoint addition.
+
 ## [1.1.0] - 2026-11-11
 
 ### Added
