@@ -51,7 +51,7 @@
         New Playlist
       </button>
 
-      <button id="btn-open-help" class="btn btn-outline btn-sm" title="Anleitung & Tipps (Guide)">
+      <button id="btn-open-help" class="btn btn-outline btn-sm" title="User Guide &amp; Keyboard Shortcuts">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Guide
       </button>
@@ -231,7 +231,7 @@
               🗑 Remove Selected
             </button>
 
-            <div class="dnd-hint">💡 <strong>Drag &amp; Drop:</strong> Songs zwischen den Panels ziehen oder per <strong>⋮⋮</strong> in der Playlist umsortieren!</div>
+            <div class="dnd-hint">💡 <strong>Drag &amp; Drop:</strong> Drag songs across panels or use <strong>⋮⋮</strong> handles to reorder within playlist!</div>
           </div>
         </div>
 
@@ -628,7 +628,7 @@
     <div class="modal-content modal-wide modal-tall">
       <div class="modal-header">
         <div class="modal-title-with-badge">
-          <h3>📖 Anleitung &amp; Funktionen</h3>
+          <h3>📖 User Guide &amp; Features</h3>
           <span class="badge badge-cyan">v1.2</span>
         </div>
         <button class="btn-close-modal" data-close="modal-help">&times;</button>
@@ -638,25 +638,25 @@
           <div class="guide-card">
             <div class="guide-icon">🖱️</div>
             <div class="guide-info">
-              <h4>Drag &amp; Drop (Umsortieren &amp; Übertragen)</h4>
-              <p><strong>In-Playlist Umsortieren:</strong> Packe einen Song links am Griff-Symbol (<code>⋮⋮</code>) und ziehe ihn nach oben oder unten. Eine Cyan-Linie markiert die Zielposition. Die neue Reihenfolge wird sofort in TIDAL gespeichert!</p>
-              <p><strong>Zwischen den Panels:</strong> Ziehe Songs von Panel A nach Panel B (oder umgekehrt) zum Kopieren. Mit gedrückter <kbd>Alt</kbd>- oder <kbd>Shift</kbd>-Taste werden sie verschoben.</p>
+              <h4>Drag &amp; Drop (Reordering &amp; Transfers)</h4>
+              <p><strong>In-Playlist Reordering:</strong> Grab any track by the grip handle (<code>⋮⋮</code>) on the left and drag up or down. A cyan indicator line shows the target position. Your new order is immediately synced to TIDAL in the cloud!</p>
+              <p><strong>Cross-Panel Transfers:</strong> Drag songs from Panel A to Panel B (or vice versa) to copy them. Hold <kbd>Alt</kbd> or <kbd>Shift</kbd> while dropping to move them.</p>
             </div>
           </div>
 
           <div class="guide-card">
             <div class="guide-icon">📊</div>
             <div class="guide-info">
-              <h4>Sortieren &amp; Reihenfolge speichern</h4>
-              <p>Sortiere deine Songs flexibel nach <strong>Titel, Interpret, Album oder Dauer</strong> (aufsteigend oder absteigend). Klicke auf <strong>„Save Order“</strong>, um diese Sortierung dauerhaft in deiner Cloud-Playlist auf TIDAL zu sichern.</p>
+              <h4>Sort &amp; Save Order</h4>
+              <p>Sort tracks dynamically by <strong>Title, Artist, Album, or Duration</strong> (ascending or descending). Click <strong>"Save Order"</strong> to permanently save this sequence to your cloud playlist on TIDAL.</p>
             </div>
           </div>
 
           <div class="guide-card">
             <div class="guide-icon">🔍</div>
             <div class="guide-info">
-              <h4>Duplikate-Finder &amp; Bereinigung</h4>
-              <p>Klicke auf <strong>„Duplicates“</strong>, um deine Playlist automatisch nach doppelten Titeln (exakte TIDAL-ID sowie Titel &amp; Interpret) zu scannen. Mit <strong>1-Klick „Clean Duplicates“</strong> werden alle Kopien entfernt – der älteste Eintrag bleibt sicher erhalten.</p>
+              <h4>Duplicate Finder &amp; 1-Click Cleaner</h4>
+              <p>Click <strong>"Duplicates"</strong> in any playlist header to automatically scan for duplicate tracks (matching exact TIDAL IDs and normalized title &amp; artist). Click <strong>"Clean Duplicates"</strong> to remove copies while safely preserving the original track.</p>
             </div>
           </div>
 
@@ -664,49 +664,49 @@
             <div class="guide-icon">💾</div>
             <div class="guide-info">
               <h4>Backup, Export &amp; Import</h4>
-              <p><strong>Export:</strong> Sichere deine Playlists als <code>JSON</code> (volle Metadaten), <code>CSV</code> (Excel-kompatibel) oder <code>M3U8</code> (für DJ-Software / Medienplayer).</p>
-              <p><strong>Import:</strong> Lade Backups hoch – wahlweise als <strong>neue Playlist</strong> oder direkt an die geöffnete Playlist in <strong>Panel A</strong> oder <strong>Panel B</strong> anhängen.</p>
+              <p><strong>Export:</strong> Save your playlists as <code>JSON</code> (complete metadata), <code>CSV</code> (spreadsheet &amp; DJ tool format), or <code>M3U8</code> (media players).</p>
+              <p><strong>Import:</strong> Upload backup files — choose to create a <strong>new playlist</strong> or append tracks directly to <strong>Panel A</strong> or <strong>Panel B</strong>.</p>
             </div>
           </div>
 
           <div class="guide-card">
             <div class="guide-icon">⚡</div>
             <div class="guide-info">
-              <h4>Auto-Split (&gt; 99 Songs)</h4>
-              <p>Perfekt für Autoradios oder Streaming-Hardware mit 99-Track-Grenze: Teilt eine große Playlist mit einem Klick in nummerierte Abschnitte (<code>[Name] 1</code>, <code>[Name] 2</code>, <code>[Name] 3</code>...) auf.</p>
+              <h4>Auto-Split (&gt; 99 Tracks)</h4>
+              <p>Designed for car head-units and audio gear with a 99-track limit: automatically splits large playlists into numbered chunks (<code>[Name] 1</code>, <code>[Name] 2</code>, <code>[Name] 3</code>...).</p>
             </div>
           </div>
 
           <div class="guide-card">
             <div class="guide-icon">🔀</div>
             <div class="guide-info">
-              <h4>Merge &amp; Cloud-Shuffle</h4>
-              <p><strong>Merge:</strong> Führt mehrere Playlists zu einer neuen Gesamt-Playlist zusammen (mit automatischer Deduplizierung).</p>
-              <p><strong>Shuffle:</strong> Mischt die Songs einer Playlist dauerhaft und zufällig in deiner TIDAL-Cloud.</p>
+              <h4>Merge &amp; Cloud Shuffle</h4>
+              <p><strong>Merge:</strong> Combine multiple playlists into a new unified master playlist (with optional automatic deduplication).</p>
+              <p><strong>Shuffle:</strong> Permanently randomize track ordering directly in the TIDAL cloud.</p>
             </div>
           </div>
 
           <div class="guide-card">
             <div class="guide-icon">🔎</div>
             <div class="guide-info">
-              <h4>TIDAL-Katalogsuche &amp; Audio-Preview</h4>
-              <p><strong>Suche:</strong> Drücke <kbd>Cmd+K</kbd> (oder <kbd>Strg+K</kbd>), um Millionen von TIDAL-Tracks zu durchsuchen und mit einem Klick zu Panel A oder B hinzuzufügen.</p>
-              <p><strong>Vorhören:</strong> Klicke auf das Cover eines Songs, um die 30-Sekunden Audio-Vorschau im unteren Player abzuspielen.</p>
+              <h4>TIDAL Catalog Search &amp; Audio Preview</h4>
+              <p><strong>Search:</strong> Press <kbd>Cmd+K</kbd> (or <kbd>Ctrl+K</kbd>) to search millions of TIDAL tracks and add them directly to Panel A or Panel B with 1 click.</p>
+              <p><strong>Audio Preview:</strong> Click the album artwork of any song to play a 30-second audio preview in the bottom player bar.</p>
             </div>
           </div>
 
           <div class="guide-card">
             <div class="guide-icon">⌨️</div>
             <div class="guide-info">
-              <h4>Tastatur-Kürzel</h4>
-              <p><kbd>Cmd+K</kbd> / <kbd>Ctrl+K</kbd>: TIDAL-Katalogsuche öffnen</p>
-              <p><kbd>Esc</kbd>: Aktives Dialogfenster schließen</p>
+              <h4>Keyboard Shortcuts</h4>
+              <p><kbd>Cmd+K</kbd> / <kbd>Ctrl+K</kbd>: Open TIDAL catalog search</p>
+              <p><kbd>Esc</kbd>: Close active modal dialog</p>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" data-close="modal-help">Alles klar!</button>
+        <button class="btn btn-primary" data-close="modal-help">Got it!</button>
       </div>
     </div>
   </div>

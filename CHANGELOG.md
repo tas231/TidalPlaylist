@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-11-11
+
+### Changed
+- **Full Internationalization (English)**:
+  - Standardized all application text, in-app user guide modal, UI hints, tooltips, and documentation into fluent English for international users.
+
 ## [1.2.1] - 2026-11-11
 
 ### Added
@@ -13,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Modal Backdrop Dismiss**: Clicking outside any modal dialog on the darkened overlay now gracefully closes the dialog.
 
 ### Documentation
-- **Comprehensive README.md**: Added detailed feature descriptions, an organized German Web UI walkthrough table, keyboard shortcuts reference, and complete CLI command table.
+- **Comprehensive README.md**: Added detailed feature descriptions, an organized Web UI walkthrough table, keyboard shortcuts reference, and complete CLI command table.
 
 ### Security
 - **Hardened Repository Ignored Patterns**: Extended `.gitignore` with strict exclusion filters for session files, OAuth tokens, `.env` variants, private keys (`.pem`, `.key`), certificates, credentials, and secrets to ensure zero sensitive data or credentials can ever be tracked or committed.

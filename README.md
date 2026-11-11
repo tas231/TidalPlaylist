@@ -70,26 +70,26 @@ The local web server starts and your browser will open automatically at:
 
 ---
 
-## 📖 Bedienungsanleitung (Web UI Walkthrough)
+## 📖 User Guide (Web UI Walkthrough)
 
-| Funktion | Anleitung |
+| Feature | How to Use |
 |---|---|
-| **Zwei-Spalten-Ansicht** | Wähle in Dropdown A und Dropdown B jeweils eine Playlist aus, um zwei Playlists nebeneinander zu sehen. |
-| **Umsortieren (Drag & Drop)** | Ziehe einen Song an den Punkten (`⋮⋮`) links nach oben oder unten. Die Cyan-Linie zeigt die Position. Die Reihenfolge wird direkt in TIDAL gespeichert. |
-| **Songs kopieren / verschieben** | Wähle Songs per Checkbox aus und klicke auf `Copy →` bzw. `Move →`, oder ziehe Songs per Drag & Drop zwischen die Panels. |
-| **Sortieren & Speichern** | Wähle oben rechts in Panel A oder B z. B. `Title (A-Z)`. Klicke auf `Save Order`, um diese Reihenfolge in der TIDAL-Cloud zu speichern. |
-| **Duplikate bereinigen** | Klicke auf `Duplicates` in der Playlist-Kopfzeile. Prüfe gefundene Kopien und klicke auf `Clean Duplicates`. |
-| **Backup & Export** | Klicke auf `Export`, wähle JSON, CSV oder M3U und lade die Playlist-Sicherung herunter. |
-| **Import** | Klicke oben auf `Import`, wähle eine Backup-Datei und entscheide, ob eine neue Playlist erstellt oder die Songs an Panel A bzw. B angehängt werden sollen. |
-| **Große Playlists aufteilen** | Klicke auf `⚡ Split (>99)`. Playlists mit mehr als 99 Songs werden automatisch in 99er-Blöcke (`... 1`, `... 2`) aufgeteilt. |
-| **Katalogsuche & Vorhören** | Drücke `Cmd+K` zum Suchen. Klicke auf ein Albumcover für die 30-Sekunden Audio-Vorschau. |
+| **Dual-Pane View** | Select a playlist in Dropdown A and Dropdown B to inspect and manage two playlists side-by-side. |
+| **In-Playlist Reordering (Drag & Drop)** | Grab any song by the grip handle (`⋮⋮`) on the left and drag it up or down. A cyan indicator line shows the drop position. The new order is saved directly to TIDAL. |
+| **Copy / Move Tracks** | Select tracks using checkboxes and click `Copy →` or `Move →`, or drag & drop songs directly between panels (hold <kbd>Alt</kbd> or <kbd>Shift</kbd> to move). |
+| **Sort & Save Order** | Select a sort criteria like `Title (A-Z)` in the panel header. Click `Save Order` to commit this order permanently to your cloud playlist on TIDAL. |
+| **Clean Duplicates** | Click `Duplicates` in the playlist header. Inspect grouped duplicate copies and click `Clean Duplicates` to remove redundant tracks safely. |
+| **Backup & Export** | Click `Export`, select JSON, CSV, or M3U, and download your playlist backup. |
+| **Import** | Click `Import` in the top bar, upload a backup file, and choose whether to create a new playlist or append tracks directly into Panel A or Panel B. |
+| **Split Large Playlists** | Click `⚡ Split (>99)` to divide playlists with > 99 tracks into clean 99-track chunks (`... 1`, `... 2`). |
+| **Catalog Search & Preview** | Press `Cmd+K` to search millions of TIDAL tracks. Click any track cover artwork for an instant 30-second audio preview. |
 
 ---
 
-## ⌨️ Tastatur-Kürzel
+## ⌨️ Keyboard Shortcuts
 
-- <kbd>Cmd</kbd> + <kbd>K</kbd> / <kbd>Ctrl</kbd> + <kbd>K</kbd> : TIDAL-Katalogsuche öffnen
-- <kbd>Esc</kbd> : Aktives Dialogfenster / Modal schließen
+- <kbd>Cmd</kbd> + <kbd>K</kbd> / <kbd>Ctrl</kbd> + <kbd>K</kbd> : Open global TIDAL catalog search
+- <kbd>Esc</kbd> : Close active dialog or modal window
 
 ---
 
