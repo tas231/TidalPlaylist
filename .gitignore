@@ -1,0 +1,29 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# TIDAL session credentials (sensitive)
+.tidal_session.json
+tidal_session.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/

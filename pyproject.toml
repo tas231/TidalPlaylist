@@ -1,0 +1,17 @@
+[project]
+name = "tidal-playlist-manager"
+version = "1.0.0"
+description = "A modern Tidal Playlist Manager: Read, create, rename playlists, and move/copy tracks between playlists with both Web UI and CLI."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "tidalapi>=0.8.11",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "requests>=2.31.0",
+    "pydantic>=2.0.0",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
