@@ -650,6 +650,7 @@ function renderTracksList(paneKey) {
     row.draggable = true;
 
     row.innerHTML = `
+      <span class="drag-grip" title="Drag to reorder or transfer">⋮⋮</span>
       <input type="checkbox" ${isSelected ? "checked" : ""} class="track-checkbox">
       <span class="track-idx">${rowNum}</span>
       <div class="thumb-wrap ${isPlaying ? "playing" : ""}" data-track-id="${t.id}" title="Play preview">
@@ -692,7 +693,6 @@ function renderTracksList(paneKey) {
 
     // Drag events
     row.addEventListener("dragstart", (evt) => {
-      // If dragged row is not in selection, select only this row
       if (!pState.selectedIndices.has(t.index)) {
         pState.selectedIndices.clear();
         pState.selectedIndices.add(t.index);
@@ -702,6 +702,7 @@ function renderTracksList(paneKey) {
       row.classList.add("dragging");
       const transferData = {
         fromPane: paneKey,
+        fromIndex: t.index,
         indices: Array.from(pState.selectedIndices),
         trackIds: Array.from(pState.selectedIndices).map((i) => pState.tracks[i]?.id),
       };
@@ -709,15 +710,84 @@ function renderTracksList(paneKey) {
       evt.dataTransfer.effectAllowed = "copyMove";
     });
 
+    row.addEventListener("dragover", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      const rect = row.getBoundingClientRect();
+      const isUpper = (evt.clientY - rect.top) < (rect.height / 2);
+      row.classList.toggle("drop-before", isUpper);
+      row.classList.toggle("drop-after", !isUpper);
+    });
+
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drop-before", "drop-after");
+    });
+
+    row.addEventListener("drop", async (evt) => {
+      row.classList.remove("drop-before", "drop-after");
+      const raw = evt.dataTransfer.getData("application/json");
+      if (!raw) return;
+
+      try {
+        const data = JSON.parse(raw);
+        if (data.fromPane === paneKey) {
+          // Reorder within the same playlist
+          evt.preventDefault();
+          evt.stopPropagation();
+
+          const fromIndex = data.fromIndex !== undefined ? data.fromIndex : data.indices[0];
+          const rect = row.getBoundingClientRect();
+          const isUpper = (evt.clientY - rect.top) < (rect.height / 2);
+          let toIndex = parseInt(row.dataset.index, 10);
+          if (!isUpper && fromIndex < toIndex) {
+            // dropping below a lower item
+            toIndex = toIndex;
+          }
+
+          if (fromIndex !== undefined && toIndex !== undefined && fromIndex !== toIndex) {
+            await handleInPlaylistReorder(paneKey, fromIndex, toIndex);
+          }
+        }
+      } catch (e) {
+        console.error("Reorder drop error:", e);
+      }
+    });
+
     row.addEventListener("dragend", () => {
       row.classList.remove("dragging");
       document.querySelectorAll(".playlist-pane").forEach((p) => p.classList.remove("drag-over"));
+      document.querySelectorAll(".track-row").forEach((r) => r.classList.remove("drop-before", "drop-after"));
     });
 
     listEl.appendChild(row);
   });
 
   updateSelectionCounter(paneKey);
+}
+
+async function handleInPlaylistReorder(paneKey, fromIndex, toIndex) {
+  const pState = state[paneKey];
+  if (!pState.playlistId || fromIndex === toIndex) return;
+
+  // Optimistic UI update: move track locally in array
+  const [movedItem] = pState.tracks.splice(fromIndex, 1);
+  pState.tracks.splice(toIndex, 0, movedItem);
+  pState.tracks.forEach((t, i) => t.index = i);
+  pState.selectedIndices.clear();
+  pState.selectedIndices.add(toIndex);
+
+  applySortingAndFilter(paneKey);
+
+  try {
+    await api(`/api/playlists/${pState.playlistId}/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ from_index: fromIndex, to_index: toIndex }),
+    });
+    showToast(`Reordered track to position #${toIndex + 1}`, "info", 1500);
+  } catch (err) {
+    showToast(`Failed to save reorder: ${err.message}`, "error");
+    await loadPlaylistDetails(paneKey, pState.playlistId);
+  }
 }
 
 function toggleTrackSelection(paneKey, trackIndex) {

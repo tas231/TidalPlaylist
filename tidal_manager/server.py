@@ -75,6 +75,11 @@ class SortPlaylistRequest(BaseModel):
     ascending: Optional[bool] = Field(True, description="Sort ascending (A-Z) or descending (Z-A)")
 
 
+class ReorderTrackRequest(BaseModel):
+    from_index: int = Field(..., ge=0, description="Current track index (0-based)")
+    to_index: int = Field(..., ge=0, description="Target track index (0-based)")
+
+
 class ImportPlaylistRequest(BaseModel):
     title: Optional[str] = Field(None, description="Playlist title override")
     content: str = Field(..., description="Raw text of JSON, CSV, or M3U file")
@@ -355,6 +360,17 @@ def shuffle_playlist(playlist_id: str):
 # -----------------------------------------------------------------------------
 # 4. Sorting & Reordering Routes
 # -----------------------------------------------------------------------------
+
+@app.post("/api/playlists/{playlist_id}/reorder")
+def reorder_track(playlist_id: str, payload: ReorderTrackRequest):
+    """Reorder a track within a playlist by moving it from from_index to to_index."""
+    ensure_authenticated()
+    try:
+        ok = client.reorder_track(playlist_id, payload.from_index, payload.to_index)
+        return {"success": ok, "message": f"Track moved from index {payload.from_index} to {payload.to_index}"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/api/playlists/{playlist_id}/sort")
 def sort_playlist(playlist_id: str, payload: SortPlaylistRequest):

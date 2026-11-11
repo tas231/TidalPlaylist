@@ -905,6 +905,15 @@ class TidalClient:
     # 4. Sorting & Reordering
     # -------------------------------------------------------------------------
 
+    def reorder_track(self, playlist_id: str, from_index: int, to_index: int) -> bool:
+        """Move a track from one position to another within the same playlist."""
+        pl = self.get_playlist_obj(playlist_id)
+        try:
+            pl.tracks(limit=1)
+        except Exception:
+            pass
+        return pl.move_by_index(from_index, to_index)
+
     def reorder_playlist_sorted(
         self,
         playlist_id: str,

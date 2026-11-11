@@ -744,7 +744,32 @@ body {
 }
 
 .track-row.dragging {
-  opacity: 0.4;
+  opacity: 0.35;
+  background-color: var(--bg-card);
+}
+
+.track-row.drop-before {
+  border-top: 2px solid var(--primary) !important;
+}
+
+.track-row.drop-after {
+  border-bottom: 2px solid var(--primary) !important;
+}
+
+.drag-grip {
+  color: var(--text-sub);
+  cursor: grab;
+  font-size: 0.9rem;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+  user-select: none;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+}
+.track-row:hover .drag-grip {
+  opacity: 0.9;
+  color: var(--primary);
 }
 
 .track-row input[type="checkbox"] {

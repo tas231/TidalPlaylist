@@ -135,5 +135,16 @@ class TestApiEndpoints(unittest.TestCase):
             self.assertEqual(len(res.json()), 1)
 
 
+    def test_reorder_track_endpoint(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "reorder_track", return_value=True):
+            res = self.api_client.post(
+                "/api/playlists/p1/reorder",
+                json={"from_index": 0, "to_index": 3},
+            )
+            self.assertEqual(res.status_code, 200)
+            self.assertTrue(res.json()["success"])
+
+
 if __name__ == "__main__":
     unittest.main()

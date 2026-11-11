@@ -288,5 +288,18 @@ class TestTidalClient(unittest.TestCase):
         self.assertTrue(self.client.add_tracks.called)
 
 
+    def test_reorder_track(self):
+        t0 = DummyTrack(1, "Track 1")
+        t1 = DummyTrack(2, "Track 2")
+        t2 = DummyTrack(3, "Track 3")
+        dummy_pl = DummyPlaylist("p1", "Test", [t0, t1, t2])
+        dummy_pl.move_by_index = MagicMock(return_value=True)
+        self.client.get_playlist_obj = MagicMock(return_value=dummy_pl)
+
+        res = self.client.reorder_track("p1", 0, 2)
+        self.assertTrue(res)
+        self.assertTrue(dummy_pl.move_by_index.called)
+
+
 if __name__ == "__main__":
     unittest.main()
