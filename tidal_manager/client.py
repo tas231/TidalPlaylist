@@ -755,8 +755,9 @@ class TidalClient:
         file_content: str,
         format_type: str = "auto",
         description: str = "Imported via TIDAL Playlist Manager",
+        target_playlist_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Import a playlist from JSON, CSV, or M3U."""
+        """Import tracks from JSON, CSV, or M3U, creating a new playlist or appending to an existing one."""
         raw = file_content.strip()
         track_ids: List[str] = []
         parsed_title = title or "Imported Playlist"
@@ -813,6 +814,17 @@ class TidalClient:
         if not track_ids:
             raise TidalManagerError("No valid TIDAL track IDs could be found in the imported file.")
 
+        if target_playlist_id:
+            target_pl = self.get_playlist_obj(target_playlist_id)
+            self.add_tracks(target_playlist_id, track_ids, allow_duplicates=True)
+            return {
+                "success": True,
+                "playlist_id": target_playlist_id,
+                "title": target_pl.name,
+                "imported_tracks_count": len(track_ids),
+                "mode": "appended",
+            }
+
         new_pl = self.create_playlist(title=parsed_title, description=description)
         new_id = new_pl["id"]
         self.add_tracks(new_id, track_ids, allow_duplicates=True)
@@ -822,6 +834,7 @@ class TidalClient:
             "playlist_id": new_id,
             "title": parsed_title,
             "imported_tracks_count": len(track_ids),
+            "mode": "created",
         }
 
     # -------------------------------------------------------------------------

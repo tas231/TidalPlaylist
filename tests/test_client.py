@@ -247,9 +247,15 @@ class TestTidalClient(unittest.TestCase):
         self.client.create_playlist = MagicMock(return_value={"id": "pl-imp", "name": "Imported"})
         self.client.add_tracks = MagicMock(return_value=[101, 102])
 
-        imp_res = self.client.import_playlist("Imported", content, "json")
-        self.assertTrue(imp_res["success"])
-        self.assertEqual(imp_res["imported_tracks_count"], 2)
+        # Import JSON into existing target playlist
+        target_pl = DummyPlaylist("pl-target", "Existing Target", [])
+        self.client.get_playlist_obj = MagicMock(return_value=target_pl)
+        self.client.add_tracks = MagicMock(return_value=[101, 102])
+
+        imp_append_res = self.client.import_playlist("Ignored", content, "json", target_playlist_id="pl-target")
+        self.assertTrue(imp_append_res["success"])
+        self.assertEqual(imp_append_res["mode"], "appended")
+        self.assertEqual(imp_append_res["playlist_id"], "pl-target")
 
     def test_merge_playlists(self):
         t1 = DummyTrack(1, "Track 1")

@@ -80,6 +80,7 @@ class ImportPlaylistRequest(BaseModel):
     content: str = Field(..., description="Raw text of JSON, CSV, or M3U file")
     format_type: Optional[str] = Field("auto", description="'auto', 'json', 'csv', or 'm3u'")
     description: Optional[str] = Field("Imported via TIDAL Playlist Manager", description="Playlist description")
+    target_playlist_id: Optional[str] = Field(None, description="Target playlist ID to append tracks to")
 
 
 # -----------------------------------------------------------------------------
@@ -316,6 +317,7 @@ def import_playlist(payload: ImportPlaylistRequest):
             file_content=payload.content,
             format_type=payload.format_type or "auto",
             description=payload.description or "Imported via TIDAL Playlist Manager",
+            target_playlist_id=payload.target_playlist_id,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

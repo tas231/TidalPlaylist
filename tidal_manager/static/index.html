@@ -452,8 +452,17 @@
         <button class="btn-close-modal" data-close="modal-import">&times;</button>
       </div>
       <div class="modal-body">
-        <label class="form-label" for="import-title">Playlist Title (Optional)</label>
-        <input type="text" id="import-title" class="form-input" placeholder="Defaults to file name or internal title">
+        <label class="form-label" for="import-destination">Import Destination</label>
+        <select id="import-destination" class="form-input" style="cursor: pointer;">
+          <option value="new">✨ Create as a new playlist</option>
+          <option value="paneA" id="opt-import-pane-a">📥 Append to Panel A</option>
+          <option value="paneB" id="opt-import-pane-b">📥 Append to Panel B</option>
+        </select>
+
+        <div id="import-title-group">
+          <label class="form-label" for="import-title">New Playlist Title (Optional)</label>
+          <input type="text" id="import-title" class="form-input" placeholder="Defaults to file name or internal title">
+        </div>
 
         <label class="form-label" for="import-file">Upload JSON, CSV, or M3U file</label>
         <input type="file" id="import-file" class="form-input file-input" accept=".json,.csv,.m3u,.m3u8">

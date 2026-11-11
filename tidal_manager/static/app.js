@@ -156,6 +156,10 @@ const el = {
   btnSubmitExport: document.getElementById("btn-submit-export"),
 
   modalImport: document.getElementById("modal-import"),
+  importDestination: document.getElementById("import-destination"),
+  optImportPaneA: document.getElementById("opt-import-pane-a"),
+  optImportPaneB: document.getElementById("opt-import-pane-b"),
+  importTitleGroup: document.getElementById("import-title-group"),
   importTitle: document.getElementById("import-title"),
   importFile: document.getElementById("import-file"),
   importText: document.getElementById("import-text"),
@@ -991,10 +995,32 @@ function openImportModal() {
   el.importTitle.value = "";
   el.importFile.value = "";
   el.importText.value = "";
+  el.importDestination.value = "new";
+  el.importTitleGroup.classList.remove("hidden");
+
+  // Configure Panel A option
+  if (state.paneA.playlistId && state.paneA.details) {
+    el.optImportPaneA.textContent = `📥 Append to Panel A: ${state.paneA.details.name}`;
+    el.optImportPaneA.disabled = false;
+  } else {
+    el.optImportPaneA.textContent = "📥 Append to Panel A (No playlist selected)";
+    el.optImportPaneA.disabled = true;
+  }
+
+  // Configure Panel B option
+  if (state.paneB.playlistId && state.paneB.details) {
+    el.optImportPaneB.textContent = `📥 Append to Panel B: ${state.paneB.details.name}`;
+    el.optImportPaneB.disabled = false;
+  } else {
+    el.optImportPaneB.textContent = "📥 Append to Panel B (No playlist selected)";
+    el.optImportPaneB.disabled = true;
+  }
+
   el.modalImport.classList.remove("hidden");
 }
 
 async function submitImportPlaylist() {
+  const dest = el.importDestination.value;
   const title = el.importTitle.value.trim();
   let content = el.importText.value.trim();
   const file = el.importFile.files[0];
@@ -1008,27 +1034,46 @@ async function submitImportPlaylist() {
     return;
   }
 
+  let targetId = null;
+  if (dest === "paneA") {
+    targetId = state.paneA.playlistId;
+  } else if (dest === "paneB") {
+    targetId = state.paneB.playlistId;
+  }
+
   try {
-    showToast("Importing playlist to TIDAL...", "info");
+    showToast(targetId ? "Appending imported tracks..." : "Creating new imported playlist on TIDAL...", "info");
     const res = await api("/api/playlists/import", {
       method: "POST",
       body: JSON.stringify({
         title: title || (file ? file.name.replace(/\.[^/.]+$/, "") : "Imported Playlist"),
         content: content,
         format_type: "auto",
+        target_playlist_id: targetId,
       }),
     });
 
-    showToast(`Successfully imported playlist '${res.title}' with ${res.imported_tracks_count} tracks!`, "success");
-    closeModal(el.modalImport);
-    await loadPlaylists();
-
-    if (!state.paneA.playlistId) {
-      el.selectA.value = res.playlist_id;
-      await loadPlaylistDetails("paneA", res.playlist_id);
+    if (res.mode === "appended") {
+      showToast(`Successfully added ${res.imported_tracks_count} tracks to '${res.title}'!`, "success");
+      closeModal(el.modalImport);
+      if (dest === "paneA") {
+        await loadPlaylistDetails("paneA", targetId);
+      } else {
+        await loadPlaylistDetails("paneB", targetId);
+      }
+      await refreshDropdownCounts();
     } else {
-      el.selectB.value = res.playlist_id;
-      await loadPlaylistDetails("paneB", res.playlist_id);
+      showToast(`Successfully created playlist '${res.title}' with ${res.imported_tracks_count} tracks!`, "success");
+      closeModal(el.modalImport);
+      await loadPlaylists();
+
+      if (!state.paneA.playlistId) {
+        el.selectA.value = res.playlist_id;
+        await loadPlaylistDetails("paneA", res.playlist_id);
+      } else {
+        el.selectB.value = res.playlist_id;
+        await loadPlaylistDetails("paneB", res.playlist_id);
+      }
     }
   } catch (err) {
     showToast(`Import failed: ${err.message}`, "error");
@@ -1651,6 +1696,13 @@ function setupEventListeners() {
   el.catalogSearchInput.addEventListener("input", (e) => handleSearchInput(e.target.value));
 
   // Modal Submissions
+  el.importDestination.addEventListener("change", (e) => {
+    if (e.target.value === "new") {
+      el.importTitleGroup.classList.remove("hidden");
+    } else {
+      el.importTitleGroup.classList.add("hidden");
+    }
+  });
   el.btnSubmitCreate.addEventListener("click", submitCreatePlaylist);
   el.btnSubmitRename.addEventListener("click", submitRenamePlaylist);
   el.btnSubmitSplit.addEventListener("click", submitAutoSplit);
