@@ -9,14 +9,35 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# TIDAL session credentials (sensitive)
+# Sensitive session files, tokens, and credentials (STRICT - NEVER COMMIT)
 .tidal_session.json
 tidal_session.json
+*.session.json
+*.session
+*.token
+*.token.json
+.env
+.env.*
+*.env
+*.pem
+*.key
+*credentials*.json
+*secret*.json
+*.p12
+*.cer
+
+# Logs
+*.log
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+xcuserdata/
 
 # Distribution / packaging
 build/
@@ -27,3 +48,4 @@ dist/
 .pytest_cache/
 .coverage
 htmlcov/
+

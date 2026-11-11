@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-11
+
+### Security
+- **Hardened Repository Ignored Patterns**: Extended `.gitignore` with strict exclusion filters for session files, OAuth tokens, `.env` variants, private keys (`.pem`, `.key`), certificates, credentials, and secrets to ensure zero sensitive data or credentials can ever be tracked or committed.
+
 ## [1.2.0] - 2026-11-11
 
 ### Added
