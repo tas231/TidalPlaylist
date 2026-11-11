@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.1] - 2026-11-11
 
+### Added
+- **In-App User Guide Modal**: Added an interactive "Guide" button in the header bar and an illustrated Quickstart / Feature walkthrough modal explaining drag-and-drop, sorting, duplicates, backup/export/import, split, and search.
+- **Enhanced Transfer Hints**: Updated transfer dock hints to highlight both in-playlist reordering via `⋮⋮` handles and cross-panel transfers.
+- **Modal Backdrop Dismiss**: Clicking outside any modal dialog on the darkened overlay now gracefully closes the dialog.
+
+### Documentation
+- **Comprehensive README.md**: Added detailed feature descriptions, an organized German Web UI walkthrough table, keyboard shortcuts reference, and complete CLI command table.
+
 ### Security
 - **Hardened Repository Ignored Patterns**: Extended `.gitignore` with strict exclusion filters for session files, OAuth tokens, `.env` variants, private keys (`.pem`, `.key`), certificates, credentials, and secrets to ensure zero sensitive data or credentials can ever be tracked or committed.
 

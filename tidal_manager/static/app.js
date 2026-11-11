@@ -62,6 +62,7 @@ const el = {
   btnImportPlaylist: document.getElementById("btn-import-playlist"),
   btnNewPlaylist: document.getElementById("btn-new-playlist"),
   btnRefreshAll: document.getElementById("btn-refresh-all"),
+  btnOpenHelp: document.getElementById("btn-open-help"),
 
   // Transfer Dock
   btnCopyAToB: document.getElementById("btn-copy-a-to-b"),
@@ -198,6 +199,8 @@ const el = {
   confirmTitle: document.getElementById("confirm-title"),
   confirmMessage: document.getElementById("confirm-message"),
   btnConfirmOk: document.getElementById("btn-confirm-ok"),
+
+  modalHelp: document.getElementById("modal-help"),
 
   toastContainer: document.getElementById("toast-container"),
 };
@@ -1726,6 +1729,11 @@ function setupEventListeners() {
   el.btnMergePlaylists.addEventListener("click", openMergeModal);
   el.btnImportPlaylist.addEventListener("click", openImportModal);
   el.btnOpenSearch.addEventListener("click", openSearchModal);
+  if (el.btnOpenHelp && el.modalHelp) {
+    el.btnOpenHelp.addEventListener("click", () => {
+      el.modalHelp.classList.remove("hidden");
+    });
+  }
 
   // Pane A Listeners
   el.selectA.addEventListener("change", (e) => loadPlaylistDetails("paneA", e.target.value));
@@ -1794,6 +1802,15 @@ function setupEventListeners() {
       const targetId = btn.getAttribute("data-close");
       const targetEl = document.getElementById(targetId);
       if (targetEl) closeModal(targetEl);
+    });
+  });
+
+  // Close modals when clicking backdrop overlay
+  document.querySelectorAll(".modal-overlay").forEach((overlay) => {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        closeModal(overlay);
+      }
     });
   });
 
