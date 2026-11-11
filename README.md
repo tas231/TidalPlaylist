@@ -100,3 +100,6 @@ The local web server starts and your browser will open automatically at:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 Copyright (c) 2026 Tobias Schudy.
 
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+
