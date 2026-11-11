@@ -92,3 +92,11 @@ The local web server starts and your browser will open automatically at:
 ```bash
 .venv/bin/python3 -m unittest discover -s tests
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Copyright (c) 2026 Tobias Schudy.
+
