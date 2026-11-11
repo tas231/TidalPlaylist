@@ -134,6 +134,17 @@ All features are also available directly via the command-line interface:
 
 ---
 
+## ⚠️ Disclaimer & Limitation of Liability
+
+This free software is provided **"as is"** and is intended strictly as a **testing and evaluation tool** for educational and personal experimentation:
+
+- **No Liability or Responsibility:** The author(s) and contributor(s) accept **no liability or responsibility whatsoever** for any direct, indirect, incidental, or consequential damages, playlist modifications, unintended track removals, loss of data, account restrictions, or API disruptions arising from the use of or inability to use this software.
+- **Testing Use Only:** This application is provided for testing and evaluation purposes. Always verify changes and use it entirely at your own discretion and risk.
+- **Backups Strongly Recommended:** Before modifying, sorting, splitting, or deduplicating playlists, please use the built-in **Backup & Export** feature to create a local JSON, CSV, or M3U backup of your playlists.
+- **Third-Party Service:** This project is an independent open-source tool and is not affiliated with, endorsed by, or sponsored by TIDAL or Aspiro AB.
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  

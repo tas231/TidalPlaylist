@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.2] - 2026-11-11
 
+### Added
+- **Explicit Liability & Testing Disclaimers**:
+  - Added dedicated limitation of liability section in `README.md` and user-facing testing notices in the Web UI login screen and in-app Guide modal stating the software is provided "as is" for testing and evaluation purposes without warranty.
+
 ### Changed
 - **Full Internationalization (English)**:
   - Standardized all application text, in-app user guide modal, UI hints, tooltips, and documentation into fluent English for international users.
