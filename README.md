@@ -145,6 +145,14 @@ This free software is provided **"as is"** and is intended strictly as a **testi
 
 ---
 
+## 📌 Project Status & Forking
+
+This project is feature-complete for its intended scope and is provided as a finished utility. Active ongoing feature development or maintenance is not planned.
+
+If you would like to customize, extend, or build upon this tool, you are very welcome to **fork, copy, or adapt the code** freely under the terms of the [MIT License](LICENSE).
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
