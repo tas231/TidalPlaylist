@@ -156,6 +156,6 @@ If you would like to customize, extend, or build upon this tool, you are very we
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
-Copyright (c) 2026 tas231.
+Copyright (c) 2026 magicclue.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
