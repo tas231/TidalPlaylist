@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.2] - 2026-11-11
 
 ### Added
+- **Windows & Linux Support**:
+  - Added native Windows launcher `run.bat` for one-click setup and execution on Windows.
+  - Added `requirements.txt` for standard dependency installation across all environments.
+  - Documented setup and prerequisites for macOS, Windows, and Linux in `README.md`.
 - **Explicit Liability & Testing Disclaimers**:
   - Added dedicated limitation of liability section in `README.md` and user-facing testing notices in the Web UI login screen and in-app Guide modal stating the software is provided "as is" for testing and evaluation purposes without warranty.
 - **Project Status & Forking Notice**: Clarified that active ongoing feature development is not planned and invited users to freely fork and adapt the code under the MIT License.

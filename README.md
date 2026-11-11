@@ -52,27 +52,55 @@ Built with Python, FastAPI, and `tidalapi`, with zero build-step requirements.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Platform Setup
 
-### 1. Launch on Mac
+### 📦 Prerequisites (All Platforms)
 
+- **Python 3.9 or higher** (Download from [python.org](https://www.python.org/downloads/)).
+  - *Windows users:* Remember to check the box **"Add Python to PATH"** during installation.
+  - *Linux users (Ubuntu/Debian):* Ensure venv is installed: `sudo apt install python3 python3-venv python3-pip`.
+- Any modern web browser (Chrome, Edge, Firefox, Safari, Brave).
+- No Node.js, Docker, or external databases required!
+
+---
+
+### 🖥️ How to Launch
+
+#### 🍎 macOS
 In Finder, simply **double-click** either:
 - **`Start.command`** (Recommended for Mac)
 - or **`Tidal Playlist Manager.app`**
 
-Or in Terminal:
+Or from Terminal:
 ```bash
 ./run.sh
 ```
 
-The local web server starts and your browser will open automatically at:  
-👉 **`http://127.0.0.1:8000`**
+#### 🪟 Windows
+In Windows Explorer, simply **double-click**:
+- **`run.bat`**
 
-### 2. Connect your TIDAL Account
+Or in PowerShell / Command Prompt:
+```cmd
+run.bat
+```
+*(On the first run, `run.bat` will automatically set up the `.venv` virtual environment and install all dependencies).*
 
-1. Click **Connect with TIDAL**.
-2. Click the authorization link to approve the code in your browser (no password required).
-3. Once approved, the manager will instantly load your playlists side-by-side!
+#### 🐧 Linux
+Open a terminal in the project directory:
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+---
+
+### 🔑 Connect your TIDAL Account
+
+1. Once started, your default browser opens at **`http://127.0.0.1:8000`**.
+2. Click **Connect with TIDAL**.
+3. Click the authorization link to approve the code in your browser (no password required).
+4. Once approved, the manager will instantly load your playlists side-by-side!
 
 ---
 
