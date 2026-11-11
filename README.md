@@ -1,5 +1,11 @@
 # TIDAL Playlist Manager 🎵
 
+[![Release](https://img.shields.io/github/v/release/tas231/TidalPlaylist?color=cyan&label=release)](https://github.com/tas231/TidalPlaylist/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python: 3.9+](https://img.shields.io/badge/python-3.9+-3776AB.svg?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Platform: macOS | Linux | Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](https://github.com/tas231/TidalPlaylist)
+
 A powerful, modern TIDAL playlist management application featuring a dual-pane **Web UI** and a comprehensive **CLI**.
 
 Built with Python, FastAPI, and `tidalapi`, with zero build-step requirements.
