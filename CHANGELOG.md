@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-13
+
+### Fixed
+- **Spotify Status Error Handling**: Resolved server logger reference issue in `/api/spotify/status`.
+- **Spotify Developer Policy Guidance**: Added explicit detection and UI warnings for Spotify's policy requiring an active Spotify Premium subscription for the Developer App owner.
+
 ## [1.3.0] - 2026-11-13
 
 ### Added

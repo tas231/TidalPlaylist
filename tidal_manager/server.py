@@ -1,8 +1,11 @@
 """FastAPI server providing REST API and static frontend for Tidal Playlist Manager."""
 
+import logging
 import os
 from pathlib import Path
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -183,12 +186,19 @@ def get_spotify_status():
     configured = spotify_client.is_configured()
     authenticated = spotify_client.is_authenticated()
     user_info = None
+    error_detail = None
+
     if authenticated:
         try:
             user_info = spotify_client.get_current_user()
         except Exception as e:
-            logger.warning(f"Failed to fetch Spotify user: {e}")
+            err_msg = str(e)
+            logger.warning(f"Failed to fetch Spotify user: {err_msg}")
             authenticated = False
+            if "Active premium subscription required" in err_msg or "403" in err_msg:
+                error_detail = "Active Spotify Premium subscription required for the owner of the Spotify Developer App (Spotify API policy)."
+            else:
+                error_detail = err_msg
 
     return {
         "configured": configured,
@@ -196,6 +206,7 @@ def get_spotify_status():
         "client_id": spotify_client.client_id,
         "redirect_uri": spotify_client.redirect_uri,
         "user": user_info,
+        "error": error_detail,
     }
 
 

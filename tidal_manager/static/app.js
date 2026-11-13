@@ -438,6 +438,9 @@ async function checkSpotifyStatus() {
     } else {
       el.spotifyBadge.classList.add("hidden");
       el.btnSpotifyConnect.classList.remove("hidden");
+      if (res.error) {
+        showToast(`Spotify: ${res.error}`, "error", 9000);
+      }
     }
     return res;
   } catch (err) {
