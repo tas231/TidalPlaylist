@@ -786,13 +786,15 @@
         <div class="spotify-guide-box">
           <p><strong>Quick 1-Minute Setup:</strong></p>
           <ol class="spotify-setup-steps">
-            <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" class="link-cyan">developer.spotify.com/dashboard</a> and log in with your Spotify account.</li>
+            <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" class="link-cyan">developer.spotify.com/dashboard</a> and log in with your <strong>Spotify Premium</strong> account.</li>
             <li>Click <strong>Create app</strong> (App name: <em>TidalPlaylist</em>, Redirect URI: <code id="spotify-redirect-uri-display">http://127.0.0.1:8000/api/spotify/callback</code>).</li>
             <li>Copy your <strong>Client ID</strong> and <strong>Client Secret</strong> from App Settings into the fields below:</li>
           </ol>
-          <p class="spotify-premium-notice" style="margin-top: 10px; font-size: 0.85rem; color: #ffbb33;">
-            ⚠️ <strong>Spotify Developer Policy:</strong> Spotify strictly requires an active <strong>Spotify Premium</strong> subscription for the account that owns the Developer App.
-          </p>
+          <div class="spotify-premium-notice" style="margin-top: 12px; padding: 10px 14px; border-radius: 6px; background: rgba(255, 170, 0, 0.15); border: 1px solid rgba(255, 170, 0, 0.4); color: #ffbb33; font-size: 0.88rem; line-height: 1.4;">
+            ⚠️ <strong>CRITICAL REQUIREMENT (SPOTIFY DEVELOPER POLICY):</strong><br>
+            <strong>SPOTIFY STRICTLY REQUIRES AN ACTIVE SPOTIFY PREMIUM SUBSCRIPTION FOR THE ACCOUNT THAT OWNS THE DEVELOPER APP.</strong><br>
+            Spotify Free accounts are rejected by Spotify's API with a <code>403 Forbidden</code> error.
+          </div>
         </div>
 
         <label class="form-label" for="spotify-client-id">Spotify Client ID *</label>

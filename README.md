@@ -22,6 +22,14 @@ Manage in-platform playlists or transfer tracks across platforms in both directi
   - Supports both **Copy** (keep in source) and **Move** (remove from source after copying).
   - **Smart ISRC Track Matching**: Automatically queries target catalogs by international standard ISRC (International Standard Recording Code) for 100% exact track matches, with intelligent fallback to normalized Title + Artist search.
   - **Detailed Transfer Report**: Displays a clear summary dialog showing successfully transferred tracks and any tracks not found in the destination service.
+
+> [!IMPORTANT]
+> ### ⚠️ SPOTIFY PREMIUM REQUIREMENT (SPOTIFY DEVELOPER POLICY)
+> **SPOTIFY STRICTLY REQUIRES AN ACTIVE SPOTIFY PREMIUM SUBSCRIPTION FOR THE ACCOUNT THAT OWNS THE DEVELOPER APP.**  
+> Spotify Free accounts are blocked server-side by Spotify's Web API with:  
+> `403 Forbidden: Active premium subscription required for the owner of the app`.  
+> *Please ensure your Spotify Developer App is created using an account with an active Spotify Premium subscription (Individual, Duo, or Family).*
+
 - 🎧 **Read & Manage Playlists**: View personal playlists side-by-side, inspect tracklists, high-res album covers, explicit badges, track durations, and total running times.
 - ➕ **Create & Rename**: Add new playlists with descriptions on TIDAL or Spotify, or rename existing ones in-place.
 - 📋 **Copy & Move Tracks**: Copy or move selected tracks between playlists with multi-selection.
@@ -128,11 +136,20 @@ pip install --upgrade --no-cache-dir tidal-playlist-manager
 4. Once approved, the manager will instantly load your TIDAL playlists!
 
 #### 2. Spotify (Optional for Dual-Platform & Transfers)
+
+> [!WARNING]
+> ### 🚨 CRITICAL SPOTIFY REQUIREMENT (MUST READ BEFORE CONNECTING):
+> **SPOTIFY STRICTLY REQUIRES AN ACTIVE SPOTIFY PREMIUM SUBSCRIPTION FOR THE ACCOUNT USED TO CREATE THE DEVELOPER APP.**  
+> 
+> Due to Spotify's developer API policy changes, **Spotify Free accounts are blocked by Spotify's API** and will fail with `403 Forbidden: Active premium subscription required for the owner of the app`.  
+> 
+> 👉 **YOU MUST LOG INTO [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) WITH AN ACCOUNT THAT HAS AN ACTIVE SPOTIFY PREMIUM PLAN (Individual, Duo, or Family) TO CREATE YOUR APP!**
+
 1. In the top-right header, click **🟢 Connect Spotify** (or select the **🟢 Spotify** tab on Panel A or Panel B).
-2. Enter your free Spotify Developer App credentials:
-   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create a free app.
-   - Set the Redirect URI to: `http://127.0.0.1:8000/api/spotify/callback`
-   - Paste your **Client ID** and **Client Secret**.
+2. Enter your Spotify Developer App credentials:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) (logged into your **Spotify Premium** account).
+   - Click **Create app** (App name: *TidalPlaylist*, Redirect URI: `http://127.0.0.1:8000/api/spotify/callback`).
+   - Copy and paste your **Client ID** and **Client Secret**.
 3. Click **Save & Authorize Spotify**. A popup window will prompt you to approve access.
 4. Once connected, your Spotify account badge appears and you can select Spotify in either panel!
 
