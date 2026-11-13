@@ -188,6 +188,7 @@ const el = {
   removeLocalTargetName: document.getElementById("remove-local-target-name"),
   removeLocalBadgeCount: document.getElementById("remove-local-badge-count"),
   localFolderPath: document.getElementById("local-folder-path"),
+  btnBrowseLocalDir: document.getElementById("btn-browse-local-dir"),
   btnScanLocalDir: document.getElementById("btn-scan-local-dir"),
   localScanStatus: document.getElementById("local-scan-status"),
   localScanStatusText: document.getElementById("local-scan-status-text"),
@@ -1356,6 +1357,35 @@ function updateLocalMatchesSubmitButton() {
   }
 }
 
+async function browseLocalDirectory() {
+  const currentPath = el.localFolderPath ? el.localFolderPath.value.trim() : "";
+  const origHtml = el.btnBrowseLocalDir.innerHTML;
+
+  try {
+    el.btnBrowseLocalDir.disabled = true;
+    el.btnBrowseLocalDir.innerHTML = `
+      <span class="spinner-sm" style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; margin-right:4px; vertical-align:middle;"></span>
+      Selecting...
+    `;
+
+    const res = await api("/api/utils/browse-folder", {
+      method: "POST",
+      body: JSON.stringify({ initial_dir: currentPath }),
+    });
+
+    if (res && res.path) {
+      el.localFolderPath.value = res.path;
+      showToast(`Selected: ${res.path}`, "info");
+      startLocalDirectoryScan();
+    }
+  } catch (err) {
+    showToast(`Could not open system folder picker: ${err.message}`, "warning");
+  } finally {
+    el.btnBrowseLocalDir.disabled = false;
+    el.btnBrowseLocalDir.innerHTML = origHtml;
+  }
+}
+
 async function startLocalDirectoryScan() {
   const dirPath = el.localFolderPath.value.trim();
   if (!dirPath) {
@@ -2229,6 +2259,9 @@ function setupEventListeners() {
   el.btnSubmitMerge.addEventListener("click", submitMergePlaylists);
 
   // Remove Local Listeners
+  if (el.btnBrowseLocalDir) {
+    el.btnBrowseLocalDir.addEventListener("click", browseLocalDirectory);
+  }
   if (el.btnScanLocalDir) {
     el.btnScanLocalDir.addEventListener("click", startLocalDirectoryScan);
   }

@@ -15,7 +15,11 @@ from pydantic import BaseModel, Field
 
 from tidal_manager.client import TidalAuthError, TidalClient, TidalManagerError
 from tidal_manager.config import BASE_DIR
-from tidal_manager.local_matcher import match_playlist_against_local, scan_local_directory
+from tidal_manager.local_matcher import (
+    match_playlist_against_local,
+    pick_directory_dialog,
+    scan_local_directory,
+)
 from tidal_manager.spotify_client import SpotifyAuthError, SpotifyClient, SpotifyError
 
 app = FastAPI(
@@ -103,6 +107,10 @@ class SpotifyConfigRequest(BaseModel):
 class MatchLocalDirectoryRequest(BaseModel):
     directory_path: str = Field(..., min_length=1, description="Local folder path to recursively scan")
     max_files: Optional[int] = Field(50000, ge=1, le=200000, description="Max audio files to scan")
+
+
+class BrowseFolderRequest(BaseModel):
+    initial_dir: Optional[str] = Field(None, description="Initial directory path to focus dialog on")
 
 
 class RemoveLocalTracksRequest(BaseModel):
@@ -436,6 +444,16 @@ def remove_platform_playlist_local(platform: str, playlist_id: str, payload: Rem
         return {"success": True, "removed_count": removed_count}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/utils/browse-folder")
+def browse_folder(payload: Optional[BrowseFolderRequest] = None):
+    """Open a native OS directory picker dialog on the host system to select a folder."""
+    initial_dir = payload.initial_dir if payload else None
+    path = pick_directory_dialog(initial_dir=initial_dir)
+    if path:
+        return {"success": True, "path": path, "canceled": False}
+    return {"success": True, "path": None, "canceled": True}
 
 
 

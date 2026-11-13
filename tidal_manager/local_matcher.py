@@ -6,7 +6,10 @@ playlist tracks to remove tracks that are already available locally.
 """
 
 import os
+import platform
 import re
+import shutil
+import subprocess
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -269,3 +272,161 @@ def match_playlist_against_local(
         "matched_count": len(matches),
         "matches": matches,
     }
+
+
+# =============================================================================
+# Native OS Folder Picker Dialogs
+# =============================================================================
+
+
+def pick_directory_macos(initial_dir: Optional[str] = None) -> Optional[str]:
+    """Open native macOS Finder folder selection dialog via AppleScript."""
+    default_clause = ""
+    if initial_dir:
+        expanded = os.path.expanduser(initial_dir)
+        if os.path.isdir(expanded):
+            safe_p = expanded.replace('"', '\\"')
+            default_clause = f' default location (POSIX file "{safe_p}")'
+
+    if not default_clause:
+        music_dir = os.path.expanduser("~/Music")
+        if os.path.isdir(music_dir):
+            default_clause = f' default location (POSIX file "{music_dir}")'
+        else:
+            default_clause = " default location (path to home folder)"
+
+    script = f'''
+    tell application "System Events"
+        activate
+    end tell
+    set chosenFolder to choose folder with prompt "Select Music Folder for Local Scan"{default_clause}
+    return POSIX path of chosenFolder
+    '''
+    try:
+        proc = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        if proc.returncode == 0:
+            raw_path = proc.stdout.strip()
+            if raw_path:
+                if raw_path.endswith("/") and len(raw_path) > 1:
+                    raw_path = raw_path[:-1]
+                return raw_path
+        return None
+    except Exception:
+        return None
+
+
+def pick_directory_windows(initial_dir: Optional[str] = None) -> Optional[str]:
+    """Open native Windows FolderBrowserDialog via PowerShell."""
+    init_clause = ""
+    if initial_dir:
+        expanded = os.path.expanduser(initial_dir)
+        if os.path.isdir(expanded):
+            safe_p = expanded.replace('"', '`"')
+            init_clause = f'$f.SelectedPath = "{safe_p}";'
+
+    script = f"""
+    Add-Type -AssemblyName System.Windows.Forms
+    $f = New-Object System.Windows.Forms.FolderBrowserDialog
+    $f.Description = 'Select Music Folder for Local Scan'
+    $f.ShowNewFolderButton = $false
+    {init_clause}
+    if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {{
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        Write-Output $f.SelectedPath
+    }}
+    """
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            raw_path = proc.stdout.strip()
+            if raw_path.endswith(("\\", "/")) and len(raw_path) > 3:
+                raw_path = raw_path[:-1]
+            return raw_path
+        return None
+    except Exception:
+        return None
+
+
+def pick_directory_linux(initial_dir: Optional[str] = None) -> Optional[str]:
+    """Open native Linux folder picker (Zenity or KDialog)."""
+    init_path = (
+        os.path.expanduser(initial_dir)
+        if initial_dir and os.path.isdir(os.path.expanduser(initial_dir))
+        else os.path.expanduser("~")
+    )
+
+    if shutil.which("zenity"):
+        try:
+            cmd = ["zenity", "--file-selection", "--directory", "--title=Select Music Folder for Local Scan"]
+            if init_path:
+                cmd.append(f"--filename={init_path}/")
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            if proc.returncode == 0 and proc.stdout.strip():
+                return proc.stdout.strip().rstrip("/")
+        except Exception:
+            pass
+
+    if shutil.which("kdialog"):
+        try:
+            cmd = ["kdialog", "--getexistingdirectory", init_path, "--title", "Select Music Folder for Local Scan"]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            if proc.returncode == 0 and proc.stdout.strip():
+                return proc.stdout.strip().rstrip("/")
+        except Exception:
+            pass
+
+    return None
+
+
+def pick_directory_tkinter(initial_dir: Optional[str] = None) -> Optional[str]:
+    """Fallback directory picker using Tkinter."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        root.lift()
+        root.focus_force()
+        init_path = (
+            os.path.expanduser(initial_dir)
+            if initial_dir and os.path.isdir(os.path.expanduser(initial_dir))
+            else os.path.expanduser("~")
+        )
+        path = filedialog.askdirectory(parent=root, initialdir=init_path, title="Select Music Folder for Local Scan")
+        root.destroy()
+        if path:
+            return path.rstrip("/")
+        return None
+    except Exception:
+        return None
+
+
+def pick_directory_dialog(initial_dir: Optional[str] = None) -> Optional[str]:
+    """Prompt the user with a native OS folder dialog window to select a directory."""
+    sys_name = platform.system().lower()
+    if sys_name == "darwin":
+        path = pick_directory_macos(initial_dir)
+        if path:
+            return path
+    elif sys_name == "windows":
+        path = pick_directory_windows(initial_dir)
+        if path:
+            return path
+    elif sys_name == "linux":
+        path = pick_directory_linux(initial_dir)
+        if path:
+            return path
+
+    return pick_directory_tkinter(initial_dir)

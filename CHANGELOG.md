@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-11-14
+
+### Added
+- **Native OS Folder Picker Dialog ("Browse...") for Remove Locally Available**:
+  - Added a `📁 Browse...` button directly next to the local directory input in the *Remove Locally Available* modal.
+  - Automatically launches the native OS directory selection window:
+    - **macOS**: Native Finder folder chooser via AppleScript (`osascript`).
+    - **Windows**: Native Windows Explorer FolderBrowserDialog via PowerShell.
+    - **Linux**: Native Zenity or KDialog folder selector.
+    - Universal Tkinter fallback if external dialogs are unavailable.
+  - Automatically fills in the full absolute path and immediately kicks off folder scanning and track matching seamlessly.
+  - Added backend endpoint `POST /api/utils/browse-folder` and comprehensive unit test coverage.
+
 ## [1.4.3] - 2026-11-14
 
 ### Fixed

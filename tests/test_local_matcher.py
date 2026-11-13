@@ -1,16 +1,23 @@
 """Unit tests for local directory scanning and playlist matching."""
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from fastapi.testclient import TestClient
 
 from tidal_manager.local_matcher import (
     LocalAudioFile,
     extract_metadata_from_file,
     match_playlist_against_local,
     normalize_string,
+    pick_directory_dialog,
+    pick_directory_macos,
     scan_local_directory,
 )
+from tidal_manager.server import app
 
 
 class TestLocalMatcher(unittest.TestCase):
@@ -83,6 +90,47 @@ class TestLocalMatcher(unittest.TestCase):
             titles = [s.title for s in scanned]
             self.assertIn("Track One", titles)
             self.assertIn("Track Two", titles)
+
+    @patch("subprocess.run")
+    def test_pick_directory_macos_success(self, mock_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = "/Users/test/Music/Tidal/\n"
+        mock_run.return_value = mock_proc
+
+        result = pick_directory_macos("~/Music")
+        self.assertEqual(result, "/Users/test/Music/Tidal")
+
+    @patch("subprocess.run")
+    def test_pick_directory_macos_canceled(self, mock_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = ""
+        mock_proc.stderr = "User canceled (-128)"
+        mock_run.return_value = mock_proc
+
+        result = pick_directory_macos("~/Music")
+        self.assertIsNone(result)
+
+    @patch("tidal_manager.server.pick_directory_dialog", return_value="/Users/test/Music/Selected")
+    def test_api_browse_folder_selected(self, mock_pick):
+        client = TestClient(app)
+        res = client.post("/api/utils/browse-folder", json={"initial_dir": "~/Music"})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["path"], "/Users/test/Music/Selected")
+        self.assertFalse(data["canceled"])
+
+    @patch("tidal_manager.server.pick_directory_dialog", return_value=None)
+    def test_api_browse_folder_canceled(self, mock_pick):
+        client = TestClient(app)
+        res = client.post("/api/utils/browse-folder", json={})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data["success"])
+        self.assertIsNone(data["path"])
+        self.assertTrue(data["canceled"])
 
 
 if __name__ == "__main__":

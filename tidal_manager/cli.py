@@ -469,7 +469,7 @@ def cmd_web(args: argparse.Namespace) -> None:
     url = f"http://{host}:{port}"
 
     print(f"\n=======================================================")
-    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.4.3")
+    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.4.4")
     print(f"  Running at: {url}")
     print(f"  Press Ctrl+C to stop the server.")
     print(f"=======================================================\n")
