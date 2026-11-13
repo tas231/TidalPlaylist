@@ -145,6 +145,65 @@ class TestApiEndpoints(unittest.TestCase):
             self.assertEqual(res.status_code, 200)
             self.assertTrue(res.json()["success"])
 
+    def test_match_local_endpoint(self):
+        from tidal_manager.local_matcher import LocalAudioFile
+
+        mock_tracks = [
+            {"index": 0, "id": "t1", "name": "Get Lucky", "artist": "Daft Punk", "isrc": "USAT21300307"},
+            {"index": 1, "id": "t2", "name": "Starboy", "artist": "The Weeknd", "isrc": ""},
+        ]
+        mock_local = [
+            LocalAudioFile(
+                path="/music/Daft Punk - Get Lucky.mp3",
+                filename="Daft Punk - Get Lucky.mp3",
+                title="Get Lucky",
+                artist="Daft Punk",
+                album="Random Access Memories",
+                isrc="USAT21300307",
+            )
+        ]
+
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "get_playlist_details", return_value={"playlist": {"id": "p1"}, "tracks": mock_tracks}), \
+             patch("tidal_manager.server.scan_local_directory", return_value=mock_local):
+            # Test platform-specific route
+            res = self.api_client.post(
+                "/api/tidal/playlists/p1/match-local",
+                json={"directory_path": "/mock/music"},
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data["matched_count"], 1)
+            self.assertEqual(data["matches"][0]["track_name"], "Get Lucky")
+
+            # Test legacy route
+            res_legacy = self.api_client.post(
+                "/api/playlists/p1/match-local",
+                json={"directory_path": "/mock/music"},
+            )
+            self.assertEqual(res_legacy.status_code, 200)
+            self.assertEqual(res_legacy.json()["matched_count"], 1)
+
+    def test_remove_local_endpoint(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "remove_tracks_by_indices", return_value=2):
+            res = self.api_client.post(
+                "/api/tidal/playlists/p1/remove-local",
+                json={"indices": [0, 3]},
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["removed_count"], 2)
+
+            # Test legacy route
+            res_legacy = self.api_client.post(
+                "/api/playlists/p1/remove-local",
+                json={"indices": [0, 3]},
+            )
+            self.assertEqual(res_legacy.status_code, 200)
+            self.assertEqual(res_legacy.json()["removed_count"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

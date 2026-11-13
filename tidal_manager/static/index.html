@@ -172,6 +172,9 @@
                     <button id="btn-dup-a" class="btn btn-action-pill" title="Check for duplicates">
                       🔍 Duplicates
                     </button>
+                    <button id="btn-remove-local-a" class="btn btn-action-pill" title="Remove what's locally available in a folder">
+                      📂 Remove Local
+                    </button>
                     <button id="btn-shuffle-a" class="btn btn-action-pill" title="Shuffle tracks">
                       🔀 Shuffle
                     </button>
@@ -304,6 +307,9 @@
                     </button>
                     <button id="btn-dup-b" class="btn btn-action-pill" title="Check for duplicates">
                       🔍 Duplicates
+                    </button>
+                    <button id="btn-remove-local-b" class="btn btn-action-pill" title="Remove what's locally available in a folder">
+                      📂 Remove Local
                     </button>
                     <button id="btn-shuffle-b" class="btn btn-action-pill" title="Shuffle tracks">
                       🔀 Shuffle
@@ -452,6 +458,63 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal: Remove Locally Available Tracks -->
+  <div id="modal-remove-local" class="modal-overlay hidden">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <div class="modal-title-with-badge">
+          <h3>📂 Remove Locally Available</h3>
+          <span id="remove-local-badge-count" class="badge-accent hidden">0 Matches</span>
+        </div>
+        <button class="btn-close-modal" data-close="modal-remove-local">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="remove-local-pl-id">
+        <input type="hidden" id="remove-local-platform">
+        <p class="modal-intro">
+          Scan a local music folder recursively. Any track in <strong id="remove-local-target-name">Playlist</strong> that is already in your local collection (by ISRC, tag metadata, or filename) will be identified so you can remove it from this playlist.
+        </p>
+
+        <div class="form-group">
+          <label for="local-folder-path">Local Music Directory Path:</label>
+          <div class="path-input-group">
+            <input type="text" id="local-folder-path" class="input-field" placeholder="/Users/name/Music or ~/Music" value="~/Music">
+            <button id="btn-scan-local-dir" class="btn btn-primary">🔍 Scan & Match</button>
+          </div>
+          <div class="quick-path-suggestions">
+            <span class="quick-path-label">Suggestions:</span>
+            <button type="button" class="btn-path-suggestion" data-path="~/Music">~/Music</button>
+            <button type="button" class="btn-path-suggestion" data-path="~/Downloads">~/Downloads</button>
+          </div>
+        </div>
+
+        <div id="local-scan-status" class="scan-status-container hidden">
+          <div class="spinner"></div>
+          <span id="local-scan-status-text">Scanning folder recursively and analyzing tags...</span>
+        </div>
+
+        <div id="local-matches-results" class="local-matches-container hidden">
+          <div class="local-matches-toolbar">
+            <div class="local-matches-summary">
+              <span id="local-matches-summary-text">Found 0 matching tracks.</span>
+            </div>
+            <div class="local-matches-actions">
+              <button type="button" id="btn-local-select-all" class="btn-link">Select All</button>
+              <span class="divider">|</span>
+              <button type="button" id="btn-local-deselect-all" class="btn-link">Deselect All</button>
+            </div>
+          </div>
+          <div id="local-matches-list" class="duplicates-list-container local-matches-scroll"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-remove-local">Cancel</button>
+        <button id="btn-submit-remove-local" class="btn btn-danger" disabled>Remove Selected from Playlist</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Modal: Export Playlist -->
   <div id="modal-export" class="modal-overlay hidden">

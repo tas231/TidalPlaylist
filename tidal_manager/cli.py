@@ -397,6 +397,68 @@ def cmd_search(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_remove_local(args: argparse.Namespace) -> None:
+    """Scan local directory for audio files and remove locally available tracks from playlist."""
+    from tidal_manager.local_matcher import match_playlist_against_local, scan_local_directory
+
+    client = TidalClient()
+    try:
+        pl = client.resolve_playlist(args.playlist)
+        details = client.get_playlist_details(pl.id)
+        tracks = details.get("tracks", [])
+        if not tracks:
+            print(f"[INFO] Playlist '{pl.name}' has no tracks.")
+            return
+
+        dir_path = Path(args.directory).expanduser().resolve()
+        if not dir_path.is_dir():
+            print(f"[ERROR] Directory not found: {dir_path}")
+            sys.exit(1)
+
+        print(f"Scanning local directory '{dir_path}' for audio files...")
+        local_files = scan_local_directory(dir_path)
+        print(f"Found {len(local_files)} local audio files.")
+
+        print(f"Matching against {len(tracks)} tracks in '{pl.name}'...")
+        result = match_playlist_against_local(tracks, local_files)
+        matches = result["matches"]
+
+        if not matches:
+            print(f"\n✨ No locally available tracks found in playlist '{pl.name}'. All tracks are unique!")
+            return
+
+        print(f"\n[FOUND] {len(matches)} locally available tracks in '{pl.name}':\n")
+        headers = ["#", "Track Title", "Artist", "Match Type", "Matched Local File"]
+        rows = [
+            [
+                str(m["index"] + 1),
+                m["track_name"],
+                m["artist_name"],
+                m["match_type"],
+                Path(m["local_file_path"]).name,
+            ]
+            for m in matches
+        ]
+        print(format_table(headers, rows))
+
+        if args.dry_run:
+            print(f"\n[DRY RUN] Would remove {len(matches)} tracks from '{pl.name}'. No changes made.")
+            return
+
+        if not args.yes:
+            confirm = input(f"\nRemove these {len(matches)} tracks from playlist '{pl.name}'? [y/N]: ").strip().lower()
+            if confirm not in ("y", "yes"):
+                print("Operation cancelled.")
+                return
+
+        indices_to_remove = [m["index"] for m in matches]
+        removed_count = client.remove_tracks_by_indices(pl.id, indices_to_remove)
+        print(f"\n[SUCCESS] Removed {removed_count} locally available tracks from '{pl.name}'.")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+
 def cmd_web(args: argparse.Namespace) -> None:
     """Launch the Web UI server."""
     import uvicorn
@@ -407,7 +469,7 @@ def cmd_web(args: argparse.Namespace) -> None:
     url = f"http://{host}:{port}"
 
     print(f"\n=======================================================")
-    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.3.0")
+    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.4.0")
     print(f"  Running at: {url}")
     print(f"  Press Ctrl+C to stop the server.")
     print(f"=======================================================\n")
@@ -535,6 +597,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_srch.add_argument("query", help="Search keywords (title, artist)")
     p_srch.add_argument("--limit", "-l", type=int, default=20, help="Max results (default: 20)")
     p_srch.set_defaults(func=cmd_search)
+
+    # remove-local
+    p_remloc = subparsers.add_parser(
+        "remove-local",
+        help="Scan local directory and remove locally available tracks from a playlist",
+    )
+    p_remloc.add_argument("playlist", help="Playlist ID or Title")
+    p_remloc.add_argument("directory", help="Local folder path containing audio files (e.g. ~/Music)")
+    p_remloc.add_argument("--dry-run", action="store_true", help="Preview matches without deleting anything")
+    p_remloc.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
+    p_remloc.set_defaults(func=cmd_remove_local)
 
     return parser
 

@@ -110,6 +110,7 @@ const el = {
   badgeDupA: document.getElementById("badge-dup-a"),
   btnSplitA: document.getElementById("btn-split-a"),
   btnDupA: document.getElementById("btn-dup-a"),
+  btnRemoveLocalA: document.getElementById("btn-remove-local-a"),
   btnShuffleA: document.getElementById("btn-shuffle-a"),
   btnExportA: document.getElementById("btn-export-a"),
   btnRenameA: document.getElementById("btn-rename-a"),
@@ -135,6 +136,7 @@ const el = {
   badgeDupB: document.getElementById("badge-dup-b"),
   btnSplitB: document.getElementById("btn-split-b"),
   btnDupB: document.getElementById("btn-dup-b"),
+  btnRemoveLocalB: document.getElementById("btn-remove-local-b"),
   btnShuffleB: document.getElementById("btn-shuffle-b"),
   btnExportB: document.getElementById("btn-export-b"),
   btnRenameB: document.getElementById("btn-rename-b"),
@@ -177,6 +179,23 @@ const el = {
   dupBadgeCount: document.getElementById("dup-badge-count"),
   duplicatesList: document.getElementById("duplicates-list"),
   btnSubmitCleanDups: document.getElementById("btn-submit-clean-dups"),
+
+  modalRemoveLocal: document.getElementById("modal-remove-local"),
+  removeLocalPlId: document.getElementById("remove-local-pl-id"),
+  removeLocalPlatform: document.getElementById("remove-local-platform"),
+  removeLocalTargetName: document.getElementById("remove-local-target-name"),
+  removeLocalBadgeCount: document.getElementById("remove-local-badge-count"),
+  localFolderPath: document.getElementById("local-folder-path"),
+  btnScanLocalDir: document.getElementById("btn-scan-local-dir"),
+  localScanStatus: document.getElementById("local-scan-status"),
+  localScanStatusText: document.getElementById("local-scan-status-text"),
+  localMatchesResults: document.getElementById("local-matches-results"),
+  localMatchesSummaryText: document.getElementById("local-matches-summary-text"),
+  btnLocalSelectAll: document.getElementById("btn-local-select-all"),
+  btnLocalDeselectAll: document.getElementById("btn-local-deselect-all"),
+  localMatchesList: document.getElementById("local-matches-list"),
+  btnSubmitRemoveLocal: document.getElementById("btn-submit-remove-local"),
+
 
   modalExport: document.getElementById("modal-export"),
   exportPlId: document.getElementById("export-pl-id"),
@@ -1229,6 +1248,141 @@ async function submitCleanDuplicates() {
 }
 
 // ============================================================================
+// Remove Locally Available Tracks
+// ============================================================================
+
+function openRemoveLocalModal(paneKey) {
+  const pState = state[paneKey];
+  if (!pState.details) {
+    showToast("Select a playlist first", "error");
+    return;
+  }
+
+  el.removeLocalPlId.value = pState.playlistId;
+  el.removeLocalPlatform.value = pState.platform || "tidal";
+  el.removeLocalTargetName.textContent = `'${pState.details.name}'`;
+  el.removeLocalBadgeCount.classList.add("hidden");
+  el.localScanStatus.classList.add("hidden");
+  el.localMatchesResults.classList.add("hidden");
+  el.localMatchesList.innerHTML = "";
+  el.btnSubmitRemoveLocal.disabled = true;
+  el.btnSubmitRemoveLocal.textContent = "Remove Selected from Playlist";
+
+  el.modalRemoveLocal.classList.remove("hidden");
+}
+
+function updateLocalMatchesSubmitButton() {
+  const checkedBoxes = el.localMatchesList.querySelectorAll(".local-match-checkbox:checked");
+  const count = checkedBoxes.length;
+  if (count === 0) {
+    el.btnSubmitRemoveLocal.disabled = true;
+    el.btnSubmitRemoveLocal.textContent = "Remove Selected from Playlist";
+  } else {
+    el.btnSubmitRemoveLocal.disabled = false;
+    el.btnSubmitRemoveLocal.textContent = `Remove ${count} Selected from Playlist`;
+  }
+}
+
+async function startLocalDirectoryScan() {
+  const dirPath = el.localFolderPath.value.trim();
+  if (!dirPath) {
+    showToast("Please enter a local directory path", "warning");
+    return;
+  }
+
+  const platform = el.removeLocalPlatform.value || "tidal";
+  const playlistId = el.removeLocalPlId.value;
+
+  try {
+    el.btnScanLocalDir.disabled = true;
+    el.localScanStatus.classList.remove("hidden");
+    el.localMatchesResults.classList.add("hidden");
+    el.localMatchesList.innerHTML = "";
+
+    const res = await api(`/api/${platform}/playlists/${playlistId}/match-local`, {
+      method: "POST",
+      body: JSON.stringify({ directory_path: dirPath }),
+    });
+
+    el.localScanStatus.classList.add("hidden");
+    el.btnScanLocalDir.disabled = false;
+
+    if (res.matched_count === 0) {
+      el.removeLocalBadgeCount.classList.add("hidden");
+      el.localMatchesSummaryText.textContent = `Scanned ${res.scanned_files_count} local audio files. No matches found in this playlist!`;
+      el.localMatchesList.innerHTML = '<div class="tracks-empty" style="padding: 24px;">✨ All tracks in this playlist are unique (not found in your local folder).</div>';
+      el.btnSubmitRemoveLocal.disabled = true;
+      el.btnSubmitRemoveLocal.textContent = "Remove Selected from Playlist";
+    } else {
+      el.removeLocalBadgeCount.textContent = `${res.matched_count} Matches`;
+      el.removeLocalBadgeCount.classList.remove("hidden");
+      el.localMatchesSummaryText.textContent = `Scanned ${res.scanned_files_count} local files. Found ${res.matched_count} matching tracks:`;
+
+      res.matches.forEach((m) => {
+        const row = document.createElement("div");
+        row.className = "local-match-row";
+        row.innerHTML = `
+          <input type="checkbox" class="local-match-checkbox" data-index="${m.index}" checked>
+          <div class="local-match-info">
+            <div class="local-match-header">
+              <span class="local-match-track">#${m.index + 1} - ${escapeHtml(m.track_name)} &bull; ${escapeHtml(m.artist_name)}</span>
+              <span class="local-match-type-tag">${escapeHtml(m.match_type.toUpperCase())}</span>
+            </div>
+            <div class="local-match-file" title="${escapeHtml(m.local_file_path)}">📁 ${escapeHtml(m.local_filename)}</div>
+          </div>
+        `;
+
+        const cb = row.querySelector(".local-match-checkbox");
+        cb.addEventListener("change", updateLocalMatchesSubmitButton);
+        el.localMatchesList.appendChild(row);
+      });
+
+      updateLocalMatchesSubmitButton();
+    }
+
+    el.localMatchesResults.classList.remove("hidden");
+  } catch (err) {
+    el.localScanStatus.classList.add("hidden");
+    el.btnScanLocalDir.disabled = false;
+    showToast(err.message, "error");
+  }
+}
+
+async function submitRemoveLocalTracks() {
+  const checkboxes = el.localMatchesList.querySelectorAll(".local-match-checkbox:checked");
+  const indices = Array.from(checkboxes).map((cb) => parseInt(cb.dataset.index, 10));
+  if (indices.length === 0) {
+    showToast("No tracks selected for removal", "warning");
+    return;
+  }
+
+  const platform = el.removeLocalPlatform.value || "tidal";
+  const playlistId = el.removeLocalPlId.value;
+  const targetName = el.removeLocalTargetName.textContent;
+
+  openConfirmModal(
+    "Confirm Removal",
+    `Are you sure you want to remove ${indices.length} locally available track(s) from ${targetName} on ${platform.toUpperCase()}?`,
+    async () => {
+      try {
+        const res = await api(`/api/${platform}/playlists/${playlistId}/remove-local`, {
+          method: "POST",
+          body: JSON.stringify({ indices }),
+        });
+        showToast(`Successfully removed ${res.removed_count} tracks from ${targetName}!`, "success");
+        closeModal(el.modalRemoveLocal);
+        if (state.paneA.playlistId === playlistId) await loadPlaylistDetails("paneA", playlistId);
+        if (state.paneB.playlistId === playlistId) await loadPlaylistDetails("paneB", playlistId);
+        await refreshDropdownCounts();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+  );
+}
+
+
+// ============================================================================
 // 2. Backup & Export / Import
 // ============================================================================
 
@@ -1947,6 +2101,7 @@ function setupEventListeners() {
   el.btnSaveSortA.addEventListener("click", () => handleSaveSortToTidal("paneA"));
   el.btnSplitA.addEventListener("click", () => openSplitModal("paneA"));
   el.btnDupA.addEventListener("click", () => openDuplicatesModal("paneA"));
+  el.btnRemoveLocalA.addEventListener("click", () => openRemoveLocalModal("paneA"));
   el.btnShuffleA.addEventListener("click", () => handleShufflePlaylist("paneA"));
   el.btnExportA.addEventListener("click", () => openExportModal("paneA"));
   el.btnRenameA.addEventListener("click", () => openRenameModal("paneA"));
@@ -1961,6 +2116,7 @@ function setupEventListeners() {
   el.btnSaveSortB.addEventListener("click", () => handleSaveSortToTidal("paneB"));
   el.btnSplitB.addEventListener("click", () => openSplitModal("paneB"));
   el.btnDupB.addEventListener("click", () => openDuplicatesModal("paneB"));
+  el.btnRemoveLocalB.addEventListener("click", () => openRemoveLocalModal("paneB"));
   el.btnShuffleB.addEventListener("click", () => handleShufflePlaylist("paneB"));
   el.btnExportB.addEventListener("click", () => openExportModal("paneB"));
   el.btnRenameB.addEventListener("click", () => openRenameModal("paneB"));
@@ -1991,6 +2147,44 @@ function setupEventListeners() {
   el.btnSubmitExport.addEventListener("click", submitExportPlaylist);
   el.btnSubmitImport.addEventListener("click", submitImportPlaylist);
   el.btnSubmitMerge.addEventListener("click", submitMergePlaylists);
+
+  // Remove Local Listeners
+  if (el.btnScanLocalDir) {
+    el.btnScanLocalDir.addEventListener("click", startLocalDirectoryScan);
+  }
+  if (el.localFolderPath) {
+    el.localFolderPath.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        startLocalDirectoryScan();
+      }
+    });
+  }
+  if (el.btnLocalSelectAll) {
+    el.btnLocalSelectAll.addEventListener("click", () => {
+      el.localMatchesList.querySelectorAll(".local-match-checkbox").forEach((cb) => {
+        cb.checked = true;
+      });
+      updateLocalMatchesSubmitButton();
+    });
+  }
+  if (el.btnLocalDeselectAll) {
+    el.btnLocalDeselectAll.addEventListener("click", () => {
+      el.localMatchesList.querySelectorAll(".local-match-checkbox").forEach((cb) => {
+        cb.checked = false;
+      });
+      updateLocalMatchesSubmitButton();
+    });
+  }
+  document.querySelectorAll(".btn-path-suggestion").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const p = btn.getAttribute("data-path");
+      if (p && el.localFolderPath) el.localFolderPath.value = p;
+    });
+  });
+  if (el.btnSubmitRemoveLocal) {
+    el.btnSubmitRemoveLocal.addEventListener("click", submitRemoveLocalTracks);
+  }
   el.btnConfirmOk.addEventListener("click", async () => {
     closeModal(el.modalConfirm);
     if (onConfirmCallback) {

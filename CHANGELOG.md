@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-13
+
+### Added
+- **Remove Locally Available Tracks (`📂 Remove Local`)**:
+  - Recursively scans any local music directory (supporting `.mp3`, `.flac`, `.m4a`, `.aac`, `.alac`, `.wav`, `.aiff`, `.ogg`, `.opus`, `.wma`).
+  - High-precision matching engine with 3-tier intelligence:
+    1. **ISRC Match**: Exact 1:1 match if audio tags contain ISRC metadata.
+    2. **Normalized Title + Artist Match**: Strips diacritics, punctuation, and common release noise patterns (`(2011 Remaster)`, `[feat. X]`, `- Live`).
+    3. **Fuzzy / Directory Artist Match**: Discovers files where artist is in the directory path or partially formatted in filename.
+  - Interactive **Remove Local Modal** in Web UI for both TIDAL and Spotify playlists:
+    - Path input with quick suggestion pills (`~/Music`, `~/Downloads`).
+    - Recursive scanning progress indicator and tag analysis.
+    - Checkbox results list showing matched track titles, match type, and local file paths.
+    - Select all / deselect all controls and safe confirmation dialog.
+  - New CLI command: `tidal-manager remove-local <playlist> <directory> [--dry-run] [--yes]`.
+  - Backend API endpoints: `POST /api/{platform}/playlists/{id}/match-local` and `POST /api/{platform}/playlists/{id}/remove-local` (plus backward-compatible legacy routes).
+
 ## [1.3.1] - 2026-11-13
 
 ### Fixed

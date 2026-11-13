@@ -43,6 +43,10 @@ Manage in-platform playlists or transfer tracks across platforms in both directi
 - 🔍 **Duplicate Finder & 1-Click Cleaner**:
   - Scans for duplicate tracks by exact Media ID and normalized Title + Artist matching.
   - Groups duplicate copies and provides a 1-click **Clean Duplicates** action (safely retaining the earliest added copy).
+- 📂 **Remove Locally Available Tracks**:
+  - Recursively scans any local music folder (`~/Music`, `~/Downloads`, or custom paths) for audio files (`.mp3`, `.flac`, `.m4a`, `.wav`, etc.).
+  - Accurately matches tracks against your streaming playlist via ISRC tags, normalized Title + Artist, and directory structure.
+  - Interactive preview dialog with checkboxes allowing you to review matched local files and remove them from your streaming playlist in one click so only tracks not yet in your local library remain!
 - 💾 **Backup & Flexible Export / Import**:
   - **Export**: Export playlists directly as **JSON** (full metadata), **CSV** (for spreadsheets and DJ tools), or **M3U8** (for media players).
   - **Import**: Import playlists from JSON, CSV, or M3U files with flexible destinations:
@@ -166,6 +170,7 @@ pip install --upgrade --no-cache-dir tidal-playlist-manager
 | **Copy / Move Tracks** | Select tracks using checkboxes and click `Copy →` or `Move →`, or drag & drop songs directly between panels (hold <kbd>Alt</kbd> or <kbd>Shift</kbd> to move). |
 | **Sort & Save Order** | Select a sort criteria like `Title (A-Z)` in the panel header. Click `Save Order` to commit this order permanently to your cloud playlist. |
 | **Clean Duplicates** | Click `Duplicates` in the playlist header. Inspect grouped duplicate copies and click `Clean Duplicates` to remove redundant tracks safely. |
+| **Remove Locally Available** | Click `📂 Remove Local` in the playlist header. Enter or select a folder path (e.g. `~/Music`), scan for matching audio files, and remove tracks you already have locally. |
 | **Backup & Export** | Click `Export`, select JSON, CSV, or M3U, and download your playlist backup. |
 | **Import** | Click `Import` in the top bar, upload a backup file, and choose whether to create a new playlist or append tracks directly into Panel A or Panel B. |
 | **Split Large Playlists** | Click `⚡ Split (>99)` to divide playlists with > 99 tracks into clean 99-track chunks (`... 1`, `... 2`). |
@@ -199,6 +204,7 @@ All features are also available directly via the command-line interface:
 | `move` | Move tracks between playlists | `./run.sh move --from "Inbox" --to "Favorites" --indices 0,3` |
 | `split <pl>` | Auto-split playlist (>99 tracks) | `./run.sh split "Massive Library"` |
 | `duplicates <pl>` | Check or clean duplicates | `./run.sh duplicates "My Mix" --clean` |
+| `remove-local <pl> <dir>` | Scan local folder & remove locally available tracks | `./run.sh remove-local "Chill" ~/Music --dry-run` |
 | `export <pl>` | Export playlist to file | `./run.sh export "Chill" -f csv` |
 | `import <file>` | Import playlist from file | `./run.sh import "chill_backup.json"` |
 | `merge` | Merge multiple playlists | `./run.sh merge --from "Rock,Indie" -t "Rock & Indie"` |

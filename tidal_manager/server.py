@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from tidal_manager.client import TidalAuthError, TidalClient, TidalManagerError
 from tidal_manager.config import BASE_DIR
+from tidal_manager.local_matcher import match_playlist_against_local, scan_local_directory
 from tidal_manager.spotify_client import SpotifyAuthError, SpotifyClient, SpotifyError
 
 app = FastAPI(
@@ -97,6 +98,16 @@ class SpotifyConfigRequest(BaseModel):
     client_id: str = Field(..., min_length=5, description="Spotify App Client ID")
     client_secret: str = Field(..., min_length=5, description="Spotify App Client Secret")
     redirect_uri: Optional[str] = Field(None, description="Optional custom OAuth redirect URI")
+
+
+class MatchLocalDirectoryRequest(BaseModel):
+    directory_path: str = Field(..., min_length=1, description="Local folder path to recursively scan")
+    max_files: Optional[int] = Field(50000, ge=1, le=200000, description="Max audio files to scan")
+
+
+class RemoveLocalTracksRequest(BaseModel):
+    indices: List[int] = Field(..., min_items=1, description="Track indices to remove from playlist")
+
 
 
 class UniversalTransferRequest(BaseModel):
@@ -392,6 +403,42 @@ def remove_platform_tracks(platform: str, playlist_id: str, payload: RemoveTrack
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.post("/api/{platform}/playlists/{playlist_id}/match-local")
+def match_platform_playlist_local(platform: str, playlist_id: str, payload: MatchLocalDirectoryRequest):
+    """Scan local directory and find playlist tracks that are locally available."""
+    target_client = get_platform_client(platform)
+    try:
+        details = target_client.get_playlist_details(playlist_id)
+        tracks = details.get("tracks", [])
+        if not tracks:
+            return {
+                "scanned_files_count": 0,
+                "total_playlist_tracks": 0,
+                "matched_count": 0,
+                "matches": [],
+            }
+
+        local_files = scan_local_directory(payload.directory_path, max_files=payload.max_files or 50000)
+        match_result = match_playlist_against_local(tracks, local_files)
+        return match_result
+    except (FileNotFoundError, NotADirectoryError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/{platform}/playlists/{playlist_id}/remove-local")
+def remove_platform_playlist_local(platform: str, playlist_id: str, payload: RemoveLocalTracksRequest):
+    """Remove locally matched tracks by their indices from the playlist."""
+    target_client = get_platform_client(platform)
+    try:
+        removed_count = target_client.remove_tracks_by_indices(playlist_id, payload.indices)
+        return {"success": True, "removed_count": removed_count}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
 # -----------------------------------------------------------------------------
 # Universal Cross-Platform Transfer Route
 # -----------------------------------------------------------------------------
@@ -622,6 +669,19 @@ def remove_tracks(playlist_id: str, payload: RemoveTracksRequest):
         return {"success": True, "message": "Tracks removed."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/playlists/{playlist_id}/match-local")
+def match_playlist_local(playlist_id: str, payload: MatchLocalDirectoryRequest):
+    """Legacy route: Match local tracks against TIDAL playlist."""
+    return match_platform_playlist_local("tidal", playlist_id, payload)
+
+
+@app.post("/api/playlists/{playlist_id}/remove-local")
+def remove_playlist_local(playlist_id: str, payload: RemoveLocalTracksRequest):
+    """Legacy route: Remove locally available tracks from TIDAL playlist."""
+    return remove_platform_playlist_local("tidal", playlist_id, payload)
+
 
 
 @app.post("/api/playlists/{playlist_id}/split")
