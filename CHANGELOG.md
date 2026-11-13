@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Symmetrical `search_track` implemented on both `TidalClient` and `SpotifyClient`.
 - **Automated Test Suite**:
   - Added full test suites for Spotify OAuth, playlist CRUD, and universal cross-platform transfers (`tests/test_spotify.py`, `tests/test_transfer.py`).
+- **Official PyPI Release**:
+  - Published to PyPI as [`tidal-playlist-manager`](https://pypi.org/project/tidal-playlist-manager/).
+  - Direct installation via `pip install tidal-playlist-manager` and execution with `tidal-manager` console script.
+  - Automated CI/CD publishing via PyPI Trusted Publishing (OIDC).
+- **Multi-Platform Standalone Binaries**:
+  - Automated GitHub Actions release pipeline building self-contained executables for **Windows** (`.exe`), **macOS**, and **Linux** (`.tar.gz`) without requiring a local Python installation.
 
 ## [1.2.2] - 2026-11-11
 
