@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-11-14
+
+### Fixed
+- **TIDAL to TIDAL In-Platform Transfer**:
+  - Fixed parameter keyword arguments (`from_playlist_id` and `to_playlist_id`) in `/api/transfer/universal` that caused an unhandled error when copying or moving tracks between two TIDAL playlists.
+  - Added full test coverage for in-platform transfers (`tidal_to_tidal_copy` and `tidal_to_tidal_move`).
+  - Added resilient error decoding in frontend `api()` to cleanly display backend error messages instead of JSON parse token errors.
+
+### Improved
+- **Header Line Elegance & Spacing**:
+  - Redesigned the top navigation bar into sleek, logically grouped zones with generous whitespace:
+    - Left: Logo + compact search trigger bar (`⌘K`).
+    - Center/Right: Connected accounts group (`TIDAL` badge with max-width username truncation and tooltip, `Spotify` badge).
+    - Right: Action tools (`Merge`, `Import`, `+ New Playlist`, `Guide` icon, `Refresh` icon).
+  - Eliminates header line crowding on laptop and split-screen desktop displays.
+
 ## [1.4.2] - 2026-11-14
 
 ### Added

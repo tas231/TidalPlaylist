@@ -295,7 +295,13 @@ async function api(path, options = {}) {
       headers: { "Content-Type": "application/json" },
       ...options,
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text || `Request failed with status ${res.status}` };
+    }
     if (!res.ok) {
       throw new Error(data.detail || data.message || `Request failed with status ${res.status}`);
     }
@@ -337,7 +343,9 @@ function setAuthenticated(user) {
   el.btnNewPlaylist.classList.remove("hidden");
   el.btnRefreshAll.classList.remove("hidden");
 
-  el.userName.textContent = user.username || "TIDAL User";
+  const uname = user.username || "TIDAL User";
+  el.userName.textContent = uname;
+  el.userName.title = uname;
   el.userCountry.textContent = user.country_code || "US";
 
   checkSpotifyStatus();
@@ -454,7 +462,9 @@ async function checkSpotifyStatus() {
 
     if (res.authenticated && res.user) {
       el.spotifyBadge.classList.remove("hidden");
-      el.spotifyUserName.textContent = res.user.username || "Spotify User";
+      const spName = res.user.username || "Spotify User";
+      el.spotifyUserName.textContent = spName;
+      el.spotifyUserName.title = spName;
       el.btnSpotifyConnect.classList.add("hidden");
     } else {
       el.spotifyBadge.classList.add("hidden");

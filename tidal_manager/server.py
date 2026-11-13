@@ -453,110 +453,117 @@ def universal_transfer(payload: UniversalTransferRequest):
     - Spotify -> TIDAL
     Supports matching via ISRC (primary) and Title + Artist (secondary).
     """
-    from_p = payload.from_platform.lower().strip()
-    to_p = payload.to_platform.lower().strip()
-    src_client = get_platform_client(from_p)
-    dst_client = get_platform_client(to_p)
+    try:
+        from_p = payload.from_platform.lower().strip()
+        to_p = payload.to_platform.lower().strip()
+        src_client = get_platform_client(from_p)
+        dst_client = get_platform_client(to_p)
 
-    src_details = src_client.get_playlist_details(payload.from_playlist_id)
-    dst_details = dst_client.get_playlist_details(payload.to_playlist_id)
+        src_details = src_client.get_playlist_details(payload.from_playlist_id)
+        dst_details = dst_client.get_playlist_details(payload.to_playlist_id)
 
-    src_tracks = src_details.get("tracks", [])
-    selected_tracks = [src_tracks[i] for i in payload.indices if 0 <= i < len(src_tracks)]
-    if not selected_tracks:
-        raise HTTPException(status_code=400, detail="No valid tracks selected to transfer.")
+        src_tracks = src_details.get("tracks", [])
+        selected_tracks = [src_tracks[i] for i in payload.indices if 0 <= i < len(src_tracks)]
+        if not selected_tracks:
+            raise HTTPException(status_code=400, detail="No valid tracks selected to transfer.")
 
-    # 1. TIDAL -> TIDAL
-    if from_p == "tidal" and to_p == "tidal":
-        if payload.is_move:
-            res = client.move_tracks(
-                from_playlist=payload.from_playlist_id,
-                to_playlist=payload.to_playlist_id,
-                indices=payload.indices,
-            )
-        else:
-            res = client.copy_tracks(
-                from_playlist=payload.from_playlist_id,
-                to_playlist=payload.to_playlist_id,
-                indices=payload.indices,
-            )
-        return {
-            "success": True,
-            "transferred_count": len(selected_tracks),
-            "unmatched_count": 0,
-            "unmatched_tracks": [],
-            "message": f"Successfully {'moved' if payload.is_move else 'copied'} {len(selected_tracks)} tracks to '{dst_details.get('name')}'!",
-        }
-
-    # 2. Spotify -> Spotify
-    if from_p == "spotify" and to_p == "spotify":
-        uris = [t["uri"] for t in selected_tracks]
-        spotify_client.add_tracks(payload.to_playlist_id, uris)
-        if payload.is_move:
-            spotify_client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
-        return {
-            "success": True,
-            "transferred_count": len(selected_tracks),
-            "unmatched_count": 0,
-            "unmatched_tracks": [],
-            "message": f"Successfully {'moved' if payload.is_move else 'copied'} {len(selected_tracks)} tracks to '{dst_details.get('name')}'!",
-        }
-
-    # 3. TIDAL -> Spotify
-    if from_p == "tidal" and to_p == "spotify":
-        matched_uris = []
-        unmatched = []
-        for t in selected_tracks:
-            m = spotify_client.search_track(isrc=t.get("isrc"), title=t.get("name"), artist=t.get("artist"))
-            if m:
-                matched_uris.append(m["uri"])
-            else:
-                unmatched.append(f"{t.get('name')} - {t.get('artist')}")
-
-        if matched_uris:
-            spotify_client.add_tracks(payload.to_playlist_id, matched_uris)
+        # 1. TIDAL -> TIDAL
+        if from_p == "tidal" and to_p == "tidal":
             if payload.is_move:
-                client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
-
-        msg = f"Transferred {len(matched_uris)} of {len(selected_tracks)} tracks to Spotify playlist '{dst_details.get('name')}'."
-        if unmatched:
-            msg += f" ({len(unmatched)} unmatched)"
-
-        return {
-            "success": bool(matched_uris),
-            "transferred_count": len(matched_uris),
-            "unmatched_count": len(unmatched),
-            "unmatched_tracks": unmatched,
-            "message": msg,
-        }
-
-    # 4. Spotify -> TIDAL
-    if from_p == "spotify" and to_p == "tidal":
-        matched_ids = []
-        unmatched = []
-        for t in selected_tracks:
-            m = client.search_track(isrc=t.get("isrc"), title=t.get("name"), artist=t.get("artist"))
-            if m:
-                matched_ids.append(m["id"])
+                res = client.move_tracks(
+                    from_playlist_id=payload.from_playlist_id,
+                    to_playlist_id=payload.to_playlist_id,
+                    indices=payload.indices,
+                )
             else:
-                unmatched.append(f"{t.get('name')} - {t.get('artist')}")
+                res = client.copy_tracks(
+                    from_playlist_id=payload.from_playlist_id,
+                    to_playlist_id=payload.to_playlist_id,
+                    indices=payload.indices,
+                )
+            return {
+                "success": True,
+                "transferred_count": len(selected_tracks),
+                "unmatched_count": 0,
+                "unmatched_tracks": [],
+                "message": f"Successfully {'moved' if payload.is_move else 'copied'} {len(selected_tracks)} tracks to '{dst_details.get('name')}'!",
+            }
 
-        if matched_ids:
-            client.add_tracks(payload.to_playlist_id, matched_ids)
+        # 2. Spotify -> Spotify
+        if from_p == "spotify" and to_p == "spotify":
+            uris = [t["uri"] for t in selected_tracks]
+            spotify_client.add_tracks(payload.to_playlist_id, uris)
             if payload.is_move:
                 spotify_client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
+            return {
+                "success": True,
+                "transferred_count": len(selected_tracks),
+                "unmatched_count": 0,
+                "unmatched_tracks": [],
+                "message": f"Successfully {'moved' if payload.is_move else 'copied'} {len(selected_tracks)} tracks to '{dst_details.get('name')}'!",
+            }
 
-        msg = f"Transferred {len(matched_ids)} of {len(selected_tracks)} tracks to TIDAL playlist '{dst_details.get('name')}'."
-        if unmatched:
-            msg += f" ({len(unmatched)} unmatched)"
+        # 3. TIDAL -> Spotify
+        if from_p == "tidal" and to_p == "spotify":
+            matched_uris = []
+            unmatched = []
+            for t in selected_tracks:
+                m = spotify_client.search_track(isrc=t.get("isrc"), title=t.get("name"), artist=t.get("artist"))
+                if m:
+                    matched_uris.append(m["uri"])
+                else:
+                    unmatched.append(f"{t.get('name')} - {t.get('artist')}")
 
-        return {
-            "success": bool(matched_ids),
-            "transferred_count": len(matched_ids),
-            "unmatched_count": len(unmatched),
-            "unmatched_tracks": unmatched,
-            "message": msg,
-        }
+            if matched_uris:
+                spotify_client.add_tracks(payload.to_playlist_id, matched_uris)
+                if payload.is_move:
+                    client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
+
+            msg = f"Transferred {len(matched_uris)} of {len(selected_tracks)} tracks to Spotify playlist '{dst_details.get('name')}'."
+            if unmatched:
+                msg += f" ({len(unmatched)} unmatched)"
+
+            return {
+                "success": bool(matched_uris),
+                "transferred_count": len(matched_uris),
+                "unmatched_count": len(unmatched),
+                "unmatched_tracks": unmatched,
+                "message": msg,
+            }
+
+        # 4. Spotify -> TIDAL
+        if from_p == "spotify" and to_p == "tidal":
+            matched_ids = []
+            unmatched = []
+            for t in selected_tracks:
+                m = client.search_track(isrc=t.get("isrc"), title=t.get("name"), artist=t.get("artist"))
+                if m:
+                    matched_ids.append(m["id"])
+                else:
+                    unmatched.append(f"{t.get('name')} - {t.get('artist')}")
+
+            if matched_ids:
+                client.add_tracks(payload.to_playlist_id, matched_ids)
+                if payload.is_move:
+                    spotify_client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
+
+            msg = f"Transferred {len(matched_ids)} of {len(selected_tracks)} tracks to TIDAL playlist '{dst_details.get('name')}'."
+            if unmatched:
+                msg += f" ({len(unmatched)} unmatched)"
+
+            return {
+                "success": bool(matched_ids),
+                "transferred_count": len(matched_ids),
+                "unmatched_count": len(unmatched),
+                "unmatched_tracks": unmatched,
+                "message": msg,
+            }
+
+        raise HTTPException(status_code=400, detail=f"Unsupported transfer from {from_p} to {to_p}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # -----------------------------------------------------------------------------

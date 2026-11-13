@@ -117,6 +117,76 @@ class TestUniversalTransferAPI(unittest.TestCase):
             self.assertEqual(data["transferred_count"], 1)
             self.assertTrue(mock_ti_add.called)
 
+    @patch.object(client, "is_logged_in", return_value=True)
+    def test_universal_transfer_tidal_to_tidal_copy(self, mock_ti_auth):
+        mock_ti_src = {
+            "id": "ti_src",
+            "name": "Tidal Source",
+            "tracks": [{"index": 0, "id": "111", "name": "Song 1", "artist": "A1"}],
+        }
+        mock_ti_dst = {
+            "id": "ti_dst",
+            "name": "Tidal Dst",
+            "tracks": [],
+        }
+
+        with patch.object(client, "get_playlist_details", side_effect=[mock_ti_src, mock_ti_dst]), \
+             patch.object(client, "copy_tracks", return_value={"copied_count": 1}) as mock_copy:
+
+            payload = {
+                "from_platform": "tidal",
+                "to_platform": "tidal",
+                "from_playlist_id": "ti_src",
+                "to_playlist_id": "ti_dst",
+                "indices": [0],
+                "is_move": False,
+            }
+            resp = self.api_client.post("/api/transfer/universal", json=payload)
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["transferred_count"], 1)
+            mock_copy.assert_called_once_with(
+                from_playlist_id="ti_src",
+                to_playlist_id="ti_dst",
+                indices=[0],
+            )
+
+    @patch.object(client, "is_logged_in", return_value=True)
+    def test_universal_transfer_tidal_to_tidal_move(self, mock_ti_auth):
+        mock_ti_src = {
+            "id": "ti_src",
+            "name": "Tidal Source",
+            "tracks": [{"index": 0, "id": "111", "name": "Song 1", "artist": "A1"}],
+        }
+        mock_ti_dst = {
+            "id": "ti_dst",
+            "name": "Tidal Dst",
+            "tracks": [],
+        }
+
+        with patch.object(client, "get_playlist_details", side_effect=[mock_ti_src, mock_ti_dst]), \
+             patch.object(client, "move_tracks", return_value={"moved_count": 1}) as mock_move:
+
+            payload = {
+                "from_platform": "tidal",
+                "to_platform": "tidal",
+                "from_playlist_id": "ti_src",
+                "to_playlist_id": "ti_dst",
+                "indices": [0],
+                "is_move": True,
+            }
+            resp = self.api_client.post("/api/transfer/universal", json=payload)
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["transferred_count"], 1)
+            mock_move.assert_called_once_with(
+                from_playlist_id="ti_src",
+                to_playlist_id="ti_dst",
+                indices=[0],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

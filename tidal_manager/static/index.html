@@ -17,63 +17,70 @@
         <svg class="tidal-icon" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2L6 8l6 6 6-6-6-6zm-6 6L0 14l6 6 6-6-6-6zm12 0l-6 6 6 6 6-6-6-6zm-6 6l-6 6 6 6 6-6-6-6z"/>
         </svg>
-        <span class="logo-text">TIDAL <span class="logo-accent">Playlist Manager</span></span>
+        <span class="logo-text">TIDAL <span class="logo-accent">Manager</span></span>
       </div>
 
       <!-- Catalog Search Trigger in Header -->
-      <button id="btn-open-search" class="btn btn-search-trigger hidden" title="Search TIDAL Catalog">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <span>Search TIDAL Catalog...</span>
-        <kbd class="search-kbd">Cmd+K</kbd>
+      <button id="btn-open-search" class="btn btn-search-trigger hidden" title="Search Catalog (Cmd+K)">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search Catalog...</span>
+        <kbd class="search-kbd">⌘K</kbd>
       </button>
     </div>
     
     <div class="header-right">
-      <!-- TIDAL Account Badge -->
-      <div id="user-badge" class="user-badge hidden" title="Connected TIDAL Account">
-        <span class="status-dot"></span>
-        <span class="service-tag">TIDAL</span>
-        <span id="user-name" class="user-name">User</span>
-        <span id="user-country" class="country-pill">US</span>
-        <button id="btn-logout" class="btn btn-ghost btn-sm" title="Log Out from TIDAL">Log Out</button>
+      <!-- Connected Accounts Group -->
+      <div class="header-accounts-group">
+        <!-- TIDAL Account Badge -->
+        <div id="user-badge" class="user-badge hidden" title="Connected TIDAL Account">
+          <span class="status-dot"></span>
+          <span class="service-tag">TIDAL</span>
+          <span id="user-name" class="user-name">User</span>
+          <span id="user-country" class="country-pill">US</span>
+          <button id="btn-logout" class="btn btn-ghost btn-xs" title="Log Out from TIDAL">Log Out</button>
+        </div>
+
+        <!-- Spotify Account Badge / Connect Button -->
+        <div id="spotify-badge" class="user-badge spotify-badge hidden" title="Connected Spotify Account">
+          <span class="status-dot spotify-dot"></span>
+          <span class="service-tag spotify-tag">Spotify</span>
+          <span id="spotify-user-name" class="user-name">Spotify User</span>
+          <button id="btn-spotify-logout" class="btn btn-ghost btn-xs" title="Disconnect Spotify">Disconnect</button>
+        </div>
+
+        <button id="btn-spotify-connect" class="btn btn-spotify btn-sm hidden" title="Connect your Spotify account">
+          <svg class="service-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.348-1.434-5.304-1.758-8.785-.963-.334.076-.667-.13-.743-.464-.076-.334.13-.667.464-.743 3.81-.87 7.075-.505 9.714 1.107.294.18.387.563.207.856zm1.224-2.72c-.226.368-.71.485-1.078.26-2.688-1.652-6.785-2.13-9.965-1.165-.414.126-.856-.11-.982-.524-.126-.414.11-.856.524-.982 3.633-1.102 8.146-.568 11.24 1.333.368.226.485.71.26 1.078zm.106-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.495.15-1.02-.13-1.17-.625-.15-.495.13-1.02.625-1.17 3.535-1.073 9.404-.866 13.155 1.36.444.263.59.84.327 1.284-.263.444-.84.59-1.284.327z"/></svg>
+          <span>Spotify</span>
+        </button>
       </div>
 
-      <!-- Spotify Account Badge / Connect Button -->
-      <div id="spotify-badge" class="user-badge spotify-badge hidden" title="Connected Spotify Account">
-        <span class="status-dot spotify-dot"></span>
-        <span class="service-tag spotify-tag">Spotify</span>
-        <span id="spotify-user-name" class="user-name">Spotify User</span>
-        <button id="btn-spotify-logout" class="btn btn-ghost btn-sm" title="Disconnect Spotify">Disconnect</button>
+      <div class="header-divider"></div>
+
+      <!-- Action Tools -->
+      <div class="header-tools-group">
+        <button id="btn-merge-playlists" class="btn btn-outline btn-sm hidden" title="Merge multiple playlists">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L20 4M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          <span>Merge</span>
+        </button>
+
+        <button id="btn-import-playlist" class="btn btn-outline btn-sm hidden" title="Import playlist from JSON/CSV/M3U">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          <span>Import</span>
+        </button>
+
+        <button id="btn-new-playlist" class="btn btn-primary btn-sm hidden" title="Create a new playlist">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New Playlist</span>
+        </button>
+
+        <button id="btn-open-help" class="btn btn-icon btn-outline btn-sm" title="User Guide &amp; Keyboard Shortcuts">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+
+        <button id="btn-refresh-all" class="btn btn-icon btn-outline btn-sm hidden" title="Refresh all playlists">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
       </div>
-
-      <button id="btn-spotify-connect" class="btn btn-spotify btn-sm hidden" title="Connect your Spotify account">
-        <svg class="service-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.348-1.434-5.304-1.758-8.785-.963-.334.076-.667-.13-.743-.464-.076-.334.13-.667.464-.743 3.81-.87 7.075-.505 9.714 1.107.294.18.387.563.207.856zm1.224-2.72c-.226.368-.71.485-1.078.26-2.688-1.652-6.785-2.13-9.965-1.165-.414.126-.856-.11-.982-.524-.126-.414.11-.856.524-.982 3.633-1.102 8.146-.568 11.24 1.333.368.226.485.71.26 1.078zm.106-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.495.15-1.02-.13-1.17-.625-.15-.495.13-1.02.625-1.17 3.535-1.073 9.404-.866 13.155 1.36.444.263.59.84.327 1.284-.263.444-.84.59-1.284.327z"/></svg>
-        <span>Connect Spotify</span>
-      </button>
-
-      <button id="btn-merge-playlists" class="btn btn-outline btn-sm hidden" title="Merge playlists">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L20 4M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
-        Merge
-      </button>
-
-      <button id="btn-import-playlist" class="btn btn-outline btn-sm hidden" title="Import playlist from JSON/CSV/M3U">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        Import
-      </button>
-
-      <button id="btn-new-playlist" class="btn btn-primary btn-sm hidden">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        New Playlist
-      </button>
-
-      <button id="btn-open-help" class="btn btn-outline btn-sm" title="User Guide &amp; Keyboard Shortcuts">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Guide
-      </button>
-
-      <button id="btn-refresh-all" class="btn btn-icon btn-outline btn-sm hidden" title="Refresh all playlists">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      </button>
     </div>
   </header>
 
