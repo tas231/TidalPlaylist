@@ -968,6 +968,36 @@ class TidalClient:
             results.append(self._format_track(idx, t))
         return results
 
+    def search_track(
+        self,
+        isrc: Optional[str] = None,
+        title: Optional[str] = None,
+        artist: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Find best matching track in TIDAL by ISRC, or Title + Artist fallback."""
+        if not self.is_logged_in():
+            raise TidalAuthError("Not logged in to Tidal")
+
+        # 1. Search by ISRC if available
+        if isrc and len(isrc.strip()) == 12:
+            clean_isrc = isrc.strip()
+            hits = self.search_catalog(clean_isrc, limit=5)
+            for hit in hits:
+                if (hit.get("isrc") or "").upper() == clean_isrc.upper():
+                    hit["match_type"] = "isrc"
+                    return hit
+
+        # 2. Search by Title + Artist
+        if title:
+            clean_title = re.sub(r"\s*[\(\[][^()\[\]]*(feat|remaster|version|explicit|deluxe)[^()\[\]]*[\)\]]", "", title, flags=re.I).strip()
+            query = f"{clean_title} {artist or ''}".strip()
+            hits = self.search_catalog(query, limit=5)
+            if hits:
+                hits[0]["match_type"] = "title_artist"
+                return hits[0]
+
+        return None
+
     def get_track_preview(self, track_id: str) -> Dict[str, Any]:
         """Retrieve direct audio stream URL or preview link for a track."""
         if not self.is_logged_in():

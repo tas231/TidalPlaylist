@@ -4,8 +4,15 @@
 
 const state = {
   auth: { loggedIn: false, user: null },
+  spotify: {
+    configured: false,
+    authenticated: false,
+    user: null,
+    pendingPaneSwitch: null,
+  },
   playlists: [],
   paneA: {
+    platform: "tidal",
     playlistId: null,
     details: null,
     tracks: [],
@@ -17,6 +24,7 @@ const state = {
     duplicateIndices: new Set(),
   },
   paneB: {
+    platform: "tidal",
     playlistId: null,
     details: null,
     tracks: [],
@@ -55,6 +63,25 @@ const el = {
   userName: document.getElementById("user-name"),
   userCountry: document.getElementById("user-country"),
   btnLogout: document.getElementById("btn-logout"),
+
+  // Spotify Elements
+  spotifyBadge: document.getElementById("spotify-badge"),
+  spotifyUserName: document.getElementById("spotify-user-name"),
+  btnSpotifyLogout: document.getElementById("btn-spotify-logout"),
+  btnSpotifyConnect: document.getElementById("btn-spotify-connect"),
+  modalSpotifyConfig: document.getElementById("modal-spotify-config"),
+  spotifyClientId: document.getElementById("spotify-client-id"),
+  spotifyClientSecret: document.getElementById("spotify-client-secret"),
+  spotifyRedirectUriDisplay: document.getElementById("spotify-redirect-uri-display"),
+  btnSaveSpotifyConfig: document.getElementById("btn-save-spotify-config"),
+
+  // Transfer Report
+  modalTransferReport: document.getElementById("modal-transfer-report"),
+  reportTitle: document.getElementById("report-title"),
+  reportBadge: document.getElementById("report-badge"),
+  reportSummary: document.getElementById("report-summary"),
+  reportUnmatchedBox: document.getElementById("report-unmatched-box"),
+  reportUnmatchedList: document.getElementById("report-unmatched-list"),
 
   // Global Header Actions
   btnOpenSearch: document.getElementById("btn-open-search"),
@@ -173,12 +200,15 @@ const el = {
   btnSubmitMerge: document.getElementById("btn-submit-merge"),
 
   modalCreate: document.getElementById("modal-create"),
+  newPlPlatform: document.getElementById("new-pl-platform"),
   newPlTitle: document.getElementById("new-pl-title"),
   newPlDesc: document.getElementById("new-pl-desc"),
   btnSubmitCreate: document.getElementById("btn-submit-create"),
 
   modalRename: document.getElementById("modal-rename"),
+  renameModalTitle: document.getElementById("rename-modal-title"),
   renamePlId: document.getElementById("rename-pl-id"),
+  renamePlPane: document.getElementById("rename-pl-pane"),
   renamePlTitle: document.getElementById("rename-pl-title"),
   renamePlDesc: document.getElementById("rename-pl-desc"),
   btnSubmitRename: document.getElementById("btn-submit-rename"),
@@ -289,6 +319,8 @@ function setAuthenticated(user) {
   el.userName.textContent = user.username || "TIDAL User";
   el.userCountry.textContent = user.country_code || "US";
 
+  checkSpotifyStatus();
+
   clearInterval(state.pollInterval);
   clearInterval(state.countdownInterval);
 }
@@ -300,6 +332,8 @@ function setUnauthenticated() {
   el.authSection.classList.remove("hidden");
   el.dashboardSection.classList.add("hidden");
   el.userBadge.classList.add("hidden");
+  el.spotifyBadge.classList.add("hidden");
+  el.btnSpotifyConnect.classList.add("hidden");
   el.btnOpenSearch.classList.add("hidden");
   el.btnMergePlaylists.classList.add("hidden");
   el.btnImportPlaylist.classList.add("hidden");
@@ -380,25 +414,151 @@ async function handleLogout() {
 }
 
 // ============================================================================
+// Spotify Integration & Auth
+// ============================================================================
+
+async function checkSpotifyStatus() {
+  try {
+    const res = await api("/api/spotify/status");
+    state.spotify.configured = res.configured;
+    state.spotify.authenticated = res.authenticated;
+    state.spotify.user = res.user;
+
+    if (el.spotifyRedirectUriDisplay && res.redirect_uri) {
+      el.spotifyRedirectUriDisplay.textContent = res.redirect_uri;
+    }
+    if (el.spotifyClientId && res.client_id) {
+      el.spotifyClientId.value = res.client_id;
+    }
+
+    if (res.authenticated && res.user) {
+      el.spotifyBadge.classList.remove("hidden");
+      el.spotifyUserName.textContent = res.user.username || "Spotify User";
+      el.btnSpotifyConnect.classList.add("hidden");
+    } else {
+      el.spotifyBadge.classList.add("hidden");
+      el.btnSpotifyConnect.classList.remove("hidden");
+    }
+    return res;
+  } catch (err) {
+    console.error("Failed to check Spotify status:", err);
+    return null;
+  }
+}
+
+function openSpotifyConfigModal(forPane = null) {
+  if (forPane) {
+    state.spotify.pendingPaneSwitch = forPane;
+  }
+  el.modalSpotifyConfig.classList.remove("hidden");
+}
+
+async function submitSpotifyConfig() {
+  const clientId = el.spotifyClientId.value.trim();
+  const clientSecret = el.spotifyClientSecret.value.trim();
+
+  if (!clientId || !clientSecret) {
+    showToast("Please enter both Client ID and Client Secret", "error");
+    return;
+  }
+
+  try {
+    await api("/api/spotify/config", {
+      method: "POST",
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
+    });
+
+    const authRes = await api("/api/spotify/auth-url");
+    if (authRes.auth_url) {
+      const width = 500;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      window.open(
+        authRes.auth_url,
+        "SpotifyAuthorization",
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+      showToast("Approve the Spotify connection in the popup window...", "info");
+      closeModal(el.modalSpotifyConfig);
+    }
+  } catch (err) {
+    showToast(`Spotify configuration failed: ${err.message}`, "error");
+  }
+}
+
+async function logoutSpotify() {
+  try {
+    await api("/api/spotify/logout", { method: "POST" });
+    showToast("Disconnected from Spotify", "info");
+    await checkSpotifyStatus();
+
+    // Revert any pane currently set to Spotify back to TIDAL
+    if (state.paneA.platform === "spotify") {
+      await handlePlatformSwitch("paneA", "tidal");
+    }
+    if (state.paneB.platform === "spotify") {
+      await handlePlatformSwitch("paneB", "tidal");
+    }
+  } catch (err) {
+    showToast(`Spotify logout failed: ${err.message}`, "error");
+  }
+}
+
+async function handlePlatformSwitch(paneKey, newPlatform) {
+  const pState = state[paneKey];
+  if (pState.platform === newPlatform) return;
+
+  if (newPlatform === "spotify") {
+    const status = await checkSpotifyStatus();
+    if (!status || !status.authenticated) {
+      openSpotifyConfigModal(paneKey);
+      return;
+    }
+  }
+
+  pState.platform = newPlatform;
+  pState.playlistId = null;
+  pState.selectedIndices.clear();
+
+  // Update tabs UI
+  document.querySelectorAll(`.platform-tabs[data-pane="${paneKey}"] .platform-tab`).forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.platform === newPlatform);
+  });
+
+  // Load playlists for newly selected platform
+  await loadPanePlaylists(paneKey);
+  showToast(`Switched ${paneKey === "paneA" ? "Panel A" : "Panel B"} to ${newPlatform.toUpperCase()}`, "info", 1500);
+}
+
+// ============================================================================
 // Playlists Management
 // ============================================================================
 
 async function loadPlaylists() {
+  await Promise.all([
+    loadPanePlaylists("paneA"),
+    loadPanePlaylists("paneB"),
+  ]);
+}
+
+async function loadPanePlaylists(paneKey) {
+  const isA = paneKey === "paneA";
+  const pState = state[paneKey];
+  const selectEl = isA ? el.selectA : el.selectB;
+
   try {
-    const playlists = await api("/api/playlists");
-    state.playlists = playlists;
+    const playlists = await api(`/api/${pState.platform}/playlists`);
+    pState.playlists = playlists;
+    populateDropdown(selectEl, playlists, pState.playlistId);
 
-    populateDropdown(el.selectA, playlists, state.paneA.playlistId);
-    populateDropdown(el.selectB, playlists, state.paneB.playlistId);
-
-    if (state.paneA.playlistId) {
-      await loadPlaylistDetails("paneA", state.paneA.playlistId);
-    }
-    if (state.paneB.playlistId) {
-      await loadPlaylistDetails("paneB", state.paneB.playlistId);
+    if (pState.playlistId) {
+      await loadPlaylistDetails(paneKey, pState.playlistId);
+    } else {
+      await loadPlaylistDetails(paneKey, null);
     }
   } catch (err) {
-    showToast(`Error loading playlists: ${err.message}`, "error");
+    showToast(`Error loading ${pState.platform.toUpperCase()} playlists: ${err.message}`, "error");
   }
 }
 
@@ -447,7 +607,7 @@ async function loadPlaylistDetails(paneKey, playlistId) {
   listEl.classList.add("hidden");
 
   try {
-    const data = await api(`/api/playlists/${playlistId}`);
+    const data = await api(`/api/${pState.platform}/playlists/${playlistId}`);
     pState.details = data;
     pState.tracks = data.tracks || [];
 
@@ -782,7 +942,7 @@ async function handleInPlaylistReorder(paneKey, fromIndex, toIndex) {
   applySortingAndFilter(paneKey);
 
   try {
-    await api(`/api/playlists/${pState.playlistId}/reorder`, {
+    await api(`/api/${pState.platform}/playlists/${pState.playlistId}/reorder`, {
       method: "POST",
       body: JSON.stringify({ from_index: fromIndex, to_index: toIndex }),
     });
@@ -901,7 +1061,7 @@ async function transferTracks(fromPaneKey, toPaneKey, isMove = false) {
     showToast(`Select a destination playlist in ${toPaneKey === 'paneA' ? 'Panel A' : 'Panel B'}`, "error");
     return;
   }
-  if (src.playlistId === dst.playlistId) {
+  if (src.platform === dst.platform && src.playlistId === dst.playlistId) {
     showToast("Source and target playlists cannot be the same!", "error");
     return;
   }
@@ -912,25 +1072,32 @@ async function transferTracks(fromPaneKey, toPaneKey, isMove = false) {
 
   const indices = Array.from(src.selectedIndices);
   const actionName = isMove ? "Moving" : "Copying";
-  const endpoint = isMove ? "/api/playlists/move" : "/api/playlists/copy";
+  const crossDesc = (src.platform !== dst.platform)
+    ? ` (${src.platform.toUpperCase()} → ${dst.platform.toUpperCase()})`
+    : "";
 
-  showToast(`${actionName} ${indices.length} tracks to '${dst.details?.name || 'playlist'}'...`, "info");
+  showToast(`${actionName} ${indices.length} tracks to '${dst.details?.name || 'playlist'}'${crossDesc}...`, "info");
 
   try {
     const payload = {
-      from_id: src.playlistId,
-      to_id: dst.playlistId,
+      from_platform: src.platform,
+      to_platform: dst.platform,
+      from_playlist_id: src.playlistId,
+      to_playlist_id: dst.playlistId,
       indices: indices,
-      allow_duplicates: true,
+      is_move: isMove,
     };
 
-    const res = await api(endpoint, {
+    const res = await api("/api/transfer/universal", {
       method: "POST",
       body: JSON.stringify(payload),
     });
 
-    const count = res.copied_count || res.moved_count || indices.length;
-    showToast(`Successfully ${isMove ? 'moved' : 'copied'} ${count} tracks to '${res.to_playlist}'!`, "success");
+    if (res.unmatched_count > 0) {
+      showTransferReport(res);
+    } else {
+      showToast(res.message, "success");
+    }
 
     await loadPlaylistDetails(toPaneKey, dst.playlistId);
     if (isMove) {
@@ -940,6 +1107,24 @@ async function transferTracks(fromPaneKey, toPaneKey, isMove = false) {
   } catch (err) {
     showToast(`Transfer failed: ${err.message}`, "error");
   }
+}
+
+function showTransferReport(res) {
+  el.reportTitle.textContent = res.success ? "Transfer Finished with Warnings" : "Transfer Incomplete";
+  el.reportBadge.textContent = `${res.transferred_count} Transferred`;
+  el.reportBadge.className = res.transferred_count > 0 ? "badge badge-cyan" : "badge badge-dup";
+  el.reportSummary.textContent = res.message;
+
+  if (res.unmatched_tracks && res.unmatched_tracks.length > 0) {
+    el.reportUnmatchedBox.classList.remove("hidden");
+    el.reportUnmatchedList.innerHTML = res.unmatched_tracks
+      .map((t) => `<li>${escapeHtml(t)}</li>`)
+      .join("");
+  } else {
+    el.reportUnmatchedBox.classList.add("hidden");
+  }
+
+  el.modalTransferReport.classList.remove("hidden");
 }
 
 async function removeSelectedTracks() {
@@ -961,7 +1146,7 @@ async function removeSelectedTracks() {
     `Are you sure you want to remove ${indices.length} track(s) from '${plName}'?`,
     async () => {
       try {
-        await api(`/api/playlists/${pState.playlistId}/tracks`, {
+        await api(`/api/${pState.platform}/playlists/${pState.playlistId}/tracks`, {
           method: "DELETE",
           body: JSON.stringify({ indices: indices }),
         });
@@ -976,10 +1161,10 @@ async function removeSelectedTracks() {
 }
 
 async function refreshDropdownCounts() {
-  const playlists = await api("/api/playlists");
-  state.playlists = playlists;
-  populateDropdown(el.selectA, playlists, state.paneA.playlistId);
-  populateDropdown(el.selectB, playlists, state.paneB.playlistId);
+  await Promise.all([
+    loadPanePlaylists("paneA"),
+    loadPanePlaylists("paneB"),
+  ]);
 }
 
 // ============================================================================
@@ -1501,6 +1686,9 @@ async function addSingleTrackToPlaylist(paneKey, playlistId, trackId, trackName)
 function openCreateModal() {
   el.newPlTitle.value = "";
   el.newPlDesc.value = "";
+  if (el.newPlPlatform) {
+    el.newPlPlatform.value = state.paneA.platform || "tidal";
+  }
   el.modalCreate.classList.remove("hidden");
   el.newPlTitle.focus();
 }
@@ -1508,25 +1696,32 @@ function openCreateModal() {
 async function submitCreatePlaylist() {
   const title = el.newPlTitle.value.trim();
   const desc = el.newPlDesc.value.trim();
+  const platform = el.newPlPlatform ? el.newPlPlatform.value : "tidal";
   if (!title) {
     showToast("Please enter a playlist title", "error");
     return;
   }
 
+  if (platform === "spotify" && !state.spotify.authenticated) {
+    showToast("Please connect Spotify first before creating a Spotify playlist", "error");
+    openSpotifyConfigModal();
+    return;
+  }
+
   try {
-    const res = await api("/api/playlists", {
+    const res = await api(`/api/${platform}/playlists`, {
       method: "POST",
       body: JSON.stringify({ name: title, description: desc }),
     });
 
-    showToast(`Playlist '${res.name}' created!`, "success");
+    showToast(`Playlist '${res.name}' created on ${platform.toUpperCase()}!`, "success");
     closeModal(el.modalCreate);
     await loadPlaylists();
 
-    if (!state.paneA.playlistId) {
+    if (state.paneA.platform === platform && !state.paneA.playlistId) {
       el.selectA.value = res.id;
       await loadPlaylistDetails("paneA", res.id);
-    } else {
+    } else if (state.paneB.platform === platform) {
       el.selectB.value = res.id;
       await loadPlaylistDetails("paneB", res.id);
     }
@@ -1543,6 +1738,10 @@ function openRenameModal(paneKey) {
   }
 
   el.renamePlId.value = pState.playlistId;
+  if (el.renamePlPane) el.renamePlPane.value = paneKey;
+  if (el.renameModalTitle) {
+    el.renameModalTitle.textContent = `Rename ${pState.platform.toUpperCase()} Playlist`;
+  }
   el.renamePlTitle.value = pState.details.name || "";
   el.renamePlDesc.value = pState.details.description || "";
   el.modalRename.classList.remove("hidden");
@@ -1551,6 +1750,8 @@ function openRenameModal(paneKey) {
 
 async function submitRenamePlaylist() {
   const playlistId = el.renamePlId.value;
+  const paneKey = el.renamePlPane?.value || "paneA";
+  const platform = state[paneKey]?.platform || "tidal";
   const title = el.renamePlTitle.value.trim();
   const desc = el.renamePlDesc.value.trim();
 
@@ -1560,14 +1761,17 @@ async function submitRenamePlaylist() {
   }
 
   try {
-    const res = await api(`/api/playlists/${playlistId}`, {
+    const res = await api(`/api/${platform}/playlists/${playlistId}`, {
       method: "PUT",
       body: JSON.stringify({ name: title, description: desc }),
     });
 
     showToast(`Renamed playlist to '${res.name}'`, "success");
     closeModal(el.modalRename);
-    await loadPlaylists();
+    await loadPanePlaylists(paneKey);
+    if (state[paneKey].playlistId === playlistId) {
+      await loadPlaylistDetails(paneKey, playlistId);
+    }
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -1581,20 +1785,16 @@ function openDeletePlaylistModal(paneKey) {
   }
 
   const plName = pState.details.name;
+  const platform = pState.platform || "tidal";
   openConfirmModal(
-    "Delete Playlist",
-    `Are you sure you want to permanently delete playlist '${plName}'? This action cannot be undone.`,
+    `Delete ${platform.toUpperCase()} Playlist`,
+    `Are you sure you want to permanently delete playlist '${plName}' on ${platform.toUpperCase()}? This action cannot be undone.`,
     async () => {
       try {
-        await api(`/api/playlists/${pState.playlistId}`, { method: "DELETE" });
-        showToast(`Playlist '${plName}' deleted`, "info");
-        await loadPlaylists();
-        if (state.paneA.playlistId === pState.playlistId) {
-          await loadPlaylistDetails("paneA", null);
-        }
-        if (state.paneB.playlistId === pState.playlistId) {
-          await loadPlaylistDetails("paneB", null);
-        }
+        await api(`/api/${platform}/playlists/${pState.playlistId}`, { method: "DELETE" });
+        showToast(`Playlist '${plName}' deleted from ${platform.toUpperCase()}`, "info");
+        await loadPanePlaylists(paneKey);
+        await loadPlaylistDetails(paneKey, null);
       } catch (err) {
         showToast(err.message, "error");
       }
@@ -1805,6 +2005,41 @@ function setupEventListeners() {
     });
   });
 
+  // Spotify Auth & Connect Listeners
+  if (el.btnSpotifyConnect) {
+    el.btnSpotifyConnect.addEventListener("click", () => openSpotifyConfigModal());
+  }
+  if (el.btnSpotifyLogout) {
+    el.btnSpotifyLogout.addEventListener("click", logoutSpotify);
+  }
+  if (el.btnSaveSpotifyConfig) {
+    el.btnSaveSpotifyConfig.addEventListener("click", submitSpotifyConfig);
+  }
+
+  // Platform Tabs Switcher (TIDAL <-> Spotify)
+  document.querySelectorAll(".platform-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const pane = tab.dataset.pane;
+      const platform = tab.dataset.platform;
+      if (pane && platform) {
+        handlePlatformSwitch(pane, platform);
+      }
+    });
+  });
+
+  // OAuth Popup Message Listener
+  window.addEventListener("message", async (event) => {
+    if (event.data && event.data.type === "SPOTIFY_AUTH_SUCCESS") {
+      showToast("Spotify connected successfully!", "success");
+      await checkSpotifyStatus();
+      if (state.spotify.pendingPaneSwitch) {
+        const targetPane = state.spotify.pendingPaneSwitch;
+        state.spotify.pendingPaneSwitch = null;
+        await handlePlatformSwitch(targetPane, "spotify");
+      }
+    }
+  });
+
   // Close modals when clicking backdrop overlay
   document.querySelectorAll(".modal-overlay").forEach((overlay) => {
     overlay.addEventListener("click", (e) => {
@@ -1829,7 +2064,15 @@ function setupEventListeners() {
 }
 
 // Initial Boot
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
-  checkAuthStatus();
+  await checkAuthStatus();
+
+  // Check if returned from full-page Spotify OAuth redirect
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("spotify_connected") === "1") {
+    showToast("Spotify connected successfully!", "success");
+    await checkSpotifyStatus();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 });

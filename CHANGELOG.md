@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-13
+
+### Added
+- **Dual-Platform TIDAL & Spotify Support**:
+  - Independent service switcher tabs `[ 🎵 TIDAL ]` `[ 🟢 Spotify ]` for both **Panel A** and **Panel B**.
+  - Manage in-platform playlists (TIDAL ↔ TIDAL, Spotify ↔ Spotify) and cross-platform playlists seamlessly.
+- **Bi-Directional Cross-Platform Transfers**:
+  - Transfer songs from **TIDAL → Spotify** and from **Spotify → TIDAL**.
+  - Supports both **Copy** and **Move** operations via UI transfer dock buttons and drag-and-drop.
+- **Smart Catalog Matching (ISRC + Title/Artist)**:
+  - High-precision track lookup utilizing international standard **ISRC** (International Standard Recording Code) for exact 1:1 cross-platform track matching.
+  - Automatic fallback to normalized Title + Artist search when ISRC is unavailable.
+  - Comprehensive **Transfer Report Modal** highlighting successful transfers and listing any unmatched tracks.
+- **Native Spotify OAuth2 Integration**:
+  - Secure authorization code flow with local PKCE/secret support, automatic token refresh, and persistent session management.
+  - One-click Spotify connection modal with step-by-step developer setup instructions and OAuth popup approval.
+  - Account badge with Spotify username display and disconnect option.
+- **Universal Transfer & Platform-Agnostic Backend Routes**:
+  - `POST /api/transfer/universal` supporting all 4 transfer permutations.
+  - Clean platform routes: `/api/{platform}/playlists`, `/reorder`, `/tracks`, etc.
+  - Symmetrical `search_track` implemented on both `TidalClient` and `SpotifyClient`.
+- **Automated Test Suite**:
+  - Added full test suites for Spotify OAuth, playlist CRUD, and universal cross-platform transfers (`tests/test_spotify.py`, `tests/test_transfer.py`).
+
 ## [1.2.2] - 2026-11-11
 
 ### Added

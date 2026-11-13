@@ -18,3 +18,13 @@ else:
 
 DEFAULT_HOST = os.environ.get("TIDAL_WEB_HOST", "127.0.0.1")
 DEFAULT_PORT = int(os.environ.get("TIDAL_WEB_PORT", "8000"))
+
+# Spotify Session & Configuration file
+_env_spotify = os.environ.get("SPOTIFY_SESSION_FILE")
+if _env_spotify:
+    SPOTIFY_SESSION_FILE = Path(_env_spotify).expanduser().resolve()
+else:
+    SPOTIFY_SESSION_FILE = BASE_DIR / ".spotify_session.json"
+
+SPOTIFY_DEFAULT_REDIRECT_URI = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/api/spotify/callback"
+

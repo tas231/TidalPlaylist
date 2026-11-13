@@ -29,12 +29,27 @@
     </div>
     
     <div class="header-right">
-      <div id="user-badge" class="user-badge hidden">
+      <!-- TIDAL Account Badge -->
+      <div id="user-badge" class="user-badge hidden" title="Connected TIDAL Account">
         <span class="status-dot"></span>
+        <span class="service-tag">TIDAL</span>
         <span id="user-name" class="user-name">User</span>
         <span id="user-country" class="country-pill">US</span>
-        <button id="btn-logout" class="btn btn-ghost btn-sm" title="Log Out">Log Out</button>
+        <button id="btn-logout" class="btn btn-ghost btn-sm" title="Log Out from TIDAL">Log Out</button>
       </div>
+
+      <!-- Spotify Account Badge / Connect Button -->
+      <div id="spotify-badge" class="user-badge spotify-badge hidden" title="Connected Spotify Account">
+        <span class="status-dot spotify-dot"></span>
+        <span class="service-tag spotify-tag">Spotify</span>
+        <span id="spotify-user-name" class="user-name">Spotify User</span>
+        <button id="btn-spotify-logout" class="btn btn-ghost btn-sm" title="Disconnect Spotify">Disconnect</button>
+      </div>
+
+      <button id="btn-spotify-connect" class="btn btn-spotify btn-sm hidden" title="Connect your Spotify account">
+        <svg class="service-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.348-1.434-5.304-1.758-8.785-.963-.334.076-.667-.13-.743-.464-.076-.334.13-.667.464-.743 3.81-.87 7.075-.505 9.714 1.107.294.18.387.563.207.856zm1.224-2.72c-.226.368-.71.485-1.078.26-2.688-1.652-6.785-2.13-9.965-1.165-.414.126-.856-.11-.982-.524-.126-.414.11-.856.524-.982 3.633-1.102 8.146-.568 11.24 1.333.368.226.485.71.26 1.078zm.106-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.495.15-1.02-.13-1.17-.625-.15-.495.13-1.02.625-1.17 3.535-1.073 9.404-.866 13.155 1.36.444.263.59.84.327 1.284-.263.444-.84.59-1.284.327z"/></svg>
+        <span>Connect Spotify</span>
+      </button>
 
       <button id="btn-merge-playlists" class="btn btn-outline btn-sm hidden" title="Merge playlists">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L20 4M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
@@ -124,6 +139,19 @@
           <div class="pane-header">
             <div class="pane-title-row">
               <span class="pane-tag">PANEL A</span>
+
+              <!-- Platform Switcher A -->
+              <div class="platform-tabs" data-pane="paneA">
+                <button class="platform-tab active" data-platform="tidal" data-pane="paneA" title="Use TIDAL in Panel A">
+                  <svg class="service-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2L6 8l6 6 6-6-6-6zm-6 6L0 14l6 6 6-6-6-6zm12 0l-6 6 6 6 6-6-6-6zm-6 6l-6 6 6 6 6-6-6-6z"/></svg>
+                  TIDAL
+                </button>
+                <button class="platform-tab" data-platform="spotify" data-pane="paneA" title="Use Spotify in Panel A">
+                  <svg class="service-icon spotify-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.348-1.434-5.304-1.758-8.785-.963-.334.076-.667-.13-.743-.464-.076-.334.13-.667.464-.743 3.81-.87 7.075-.505 9.714 1.107.294.18.387.563.207.856zm1.224-2.72c-.226.368-.71.485-1.078.26-2.688-1.652-6.785-2.13-9.965-1.165-.414.126-.856-.11-.982-.524-.126-.414.11-.856.524-.982 3.633-1.102 8.146-.568 11.24 1.333.368.226.485.71.26 1.078zm.106-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.495.15-1.02-.13-1.17-.625-.15-.495.13-1.02.625-1.17 3.535-1.073 9.404-.866 13.155 1.36.444.263.59.84.327 1.284-.263.444-.84.59-1.284.327z"/></svg>
+                  Spotify
+                </button>
+              </div>
+
               <div class="playlist-select-wrap">
                 <select id="select-playlist-a" class="playlist-dropdown">
                   <option value="">Select a Playlist...</option>
@@ -244,6 +272,19 @@
           <div class="pane-header">
             <div class="pane-title-row">
               <span class="pane-tag">PANEL B</span>
+
+              <!-- Platform Switcher B -->
+              <div class="platform-tabs" data-pane="paneB">
+                <button class="platform-tab active" data-platform="tidal" data-pane="paneB" title="Use TIDAL in Panel B">
+                  <svg class="service-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2L6 8l6 6 6-6-6-6zm-6 6L0 14l6 6 6-6-6-6zm12 0l-6 6 6 6 6-6-6-6zm-6 6l-6 6 6 6 6-6-6-6z"/></svg>
+                  TIDAL
+                </button>
+                <button class="platform-tab" data-platform="spotify" data-pane="paneB" title="Use Spotify in Panel B">
+                  <svg class="service-icon spotify-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.348-1.434-5.304-1.758-8.785-.963-.334.076-.667-.13-.743-.464-.076-.334.13-.667.464-.743 3.81-.87 7.075-.505 9.714 1.107.294.18.387.563.207.856zm1.224-2.72c-.226.368-.71.485-1.078.26-2.688-1.652-6.785-2.13-9.965-1.165-.414.126-.856-.11-.982-.524-.126-.414.11-.856.524-.982 3.633-1.102 8.146-.568 11.24 1.333.368.226.485.71.26 1.078zm.106-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.495.15-1.02-.13-1.17-.625-.15-.495.13-1.02.625-1.17 3.535-1.073 9.404-.866 13.155 1.36.444.263.59.84.327 1.284-.263.444-.84.59-1.284.327z"/></svg>
+                  Spotify
+                </button>
+              </div>
+
               <div class="playlist-select-wrap">
                 <select id="select-playlist-b" class="playlist-dropdown">
                   <option value="">Select a Playlist...</option>
@@ -520,6 +561,12 @@
         <button class="btn-close-modal" data-close="modal-create">&times;</button>
       </div>
       <div class="modal-body">
+        <label class="form-label" for="new-pl-platform">Target Service</label>
+        <select id="new-pl-platform" class="form-input">
+          <option value="tidal">🎵 TIDAL</option>
+          <option value="spotify">🟢 Spotify</option>
+        </select>
+
         <label class="form-label" for="new-pl-title">Title *</label>
         <input type="text" id="new-pl-title" class="form-input" placeholder="e.g. Synthwave Essentials" required>
         
@@ -537,11 +584,12 @@
   <div id="modal-rename" class="modal-overlay hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Rename Playlist</h3>
+        <h3 id="rename-modal-title">Rename Playlist</h3>
         <button class="btn-close-modal" data-close="modal-rename">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="rename-pl-id">
+        <input type="hidden" id="rename-pl-pane">
         <label class="form-label" for="rename-pl-title">New Title *</label>
         <input type="text" id="rename-pl-title" class="form-input" required>
 
@@ -720,6 +768,64 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" data-close="modal-help">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Spotify Setup & Configuration -->
+  <div id="modal-spotify-config" class="modal-overlay hidden">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <div class="modal-title-with-badge">
+          <h3>🟢 Connect Spotify Account</h3>
+          <span class="badge badge-spotify">OAuth2</span>
+        </div>
+        <button class="btn-close-modal" data-close="modal-spotify-config">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="spotify-guide-box">
+          <p><strong>Quick 1-Minute Setup:</strong></p>
+          <ol class="spotify-setup-steps">
+            <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener" class="link-cyan">developer.spotify.com/dashboard</a> and log in with your Spotify account.</li>
+            <li>Click <strong>Create app</strong> (App name: <em>TidalPlaylist</em>, Redirect URI: <code id="spotify-redirect-uri-display">http://127.0.0.1:8000/api/spotify/callback</code>).</li>
+            <li>Copy your <strong>Client ID</strong> and <strong>Client Secret</strong> from App Settings into the fields below:</li>
+          </ol>
+        </div>
+
+        <label class="form-label" for="spotify-client-id">Spotify Client ID *</label>
+        <input type="text" id="spotify-client-id" class="form-input" placeholder="e.g. 1a2b3c4d5e6f7g8h9i0j...">
+
+        <label class="form-label" for="spotify-client-secret">Spotify Client Secret *</label>
+        <input type="password" id="spotify-client-secret" class="form-input" placeholder="e.g. 9z8y7x6w5v4u3t2s1r0q...">
+        
+        <p class="form-hint">Your credentials are stored strictly on your local machine in <code>.spotify_session.json</code> and never shared.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modal-spotify-config">Cancel</button>
+        <button id="btn-save-spotify-config" class="btn btn-spotify">Save &amp; Authorize with Spotify</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Transfer Report (Cross-Platform) -->
+  <div id="modal-transfer-report" class="modal-overlay hidden">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <div class="modal-title-with-badge">
+          <h3 id="report-title">Transfer Complete</h3>
+          <span id="report-badge" class="badge badge-cyan">0 Matched</span>
+        </div>
+        <button class="btn-close-modal" data-close="modal-transfer-report">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="report-summary" class="report-summary-text"></p>
+        <div id="report-unmatched-box" class="unmatched-box hidden">
+          <h4>Unmatched Tracks (could not be found on target platform):</h4>
+          <ul id="report-unmatched-list" class="unmatched-list"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-close="modal-transfer-report">Done</button>
       </div>
     </div>
   </div>

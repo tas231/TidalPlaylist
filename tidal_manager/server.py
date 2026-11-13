@@ -12,11 +12,12 @@ from pydantic import BaseModel, Field
 
 from tidal_manager.client import TidalAuthError, TidalClient, TidalManagerError
 from tidal_manager.config import BASE_DIR
+from tidal_manager.spotify_client import SpotifyAuthError, SpotifyClient, SpotifyError
 
 app = FastAPI(
-    title="TIDAL Playlist Manager API",
-    version="1.1.0",
-    description="REST API for managing Tidal playlists, moving/copying tracks, splitting, merging, duplicates cleaning, and catalog search.",
+    title="TIDAL & Spotify Playlist Manager API",
+    version="1.3.0",
+    description="REST API for managing Tidal and Spotify playlists, moving/copying tracks within and across platforms, splitting, merging, duplicates cleaning, and catalog search.",
 )
 
 # Allow CORS for development if needed
@@ -28,8 +29,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global client singleton
+# Global client singletons
 client = TidalClient()
+spotify_client = SpotifyClient()
 
 # -----------------------------------------------------------------------------
 # Pydantic Request / Response Models
@@ -88,6 +90,21 @@ class ImportPlaylistRequest(BaseModel):
     target_playlist_id: Optional[str] = Field(None, description="Target playlist ID to append tracks to")
 
 
+class SpotifyConfigRequest(BaseModel):
+    client_id: str = Field(..., min_length=5, description="Spotify App Client ID")
+    client_secret: str = Field(..., min_length=5, description="Spotify App Client Secret")
+    redirect_uri: Optional[str] = Field(None, description="Optional custom OAuth redirect URI")
+
+
+class UniversalTransferRequest(BaseModel):
+    from_platform: str = Field(..., description="'tidal' or 'spotify'")
+    to_platform: str = Field(..., description="'tidal' or 'spotify'")
+    from_playlist_id: str = Field(..., description="Source playlist ID")
+    to_playlist_id: str = Field(..., description="Destination playlist ID")
+    indices: List[int] = Field(..., min_items=1, description="Track indices in source playlist")
+    is_move: Optional[bool] = Field(False, description="Whether to remove tracks from source after copy")
+
+
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
@@ -98,6 +115,22 @@ def ensure_authenticated():
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated with Tidal. Please log in first.",
         )
+
+
+def get_platform_client(platform: str):
+    """Retrieve the client instance for specified platform with auth check."""
+    p = (platform or "").lower().strip()
+    if p == "tidal":
+        if not client.is_logged_in():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in to TIDAL.")
+        return client
+    elif p == "spotify":
+        if not spotify_client.is_authenticated():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in to Spotify.")
+        return spotify_client
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported platform '{platform}'. Choose 'tidal' or 'spotify'.")
+
 
 
 # -----------------------------------------------------------------------------
@@ -138,6 +171,334 @@ def logout():
     """Log out and remove local credentials."""
     client.logout()
     return {"success": True, "message": "Logged out successfully"}
+
+
+# -----------------------------------------------------------------------------
+# Spotify Authentication Routes
+# -----------------------------------------------------------------------------
+
+@app.get("/api/spotify/status")
+def get_spotify_status():
+    """Get the current Spotify configuration and authentication status."""
+    configured = spotify_client.is_configured()
+    authenticated = spotify_client.is_authenticated()
+    user_info = None
+    if authenticated:
+        try:
+            user_info = spotify_client.get_current_user()
+        except Exception as e:
+            logger.warning(f"Failed to fetch Spotify user: {e}")
+            authenticated = False
+
+    return {
+        "configured": configured,
+        "authenticated": authenticated,
+        "client_id": spotify_client.client_id,
+        "redirect_uri": spotify_client.redirect_uri,
+        "user": user_info,
+    }
+
+
+@app.post("/api/spotify/config")
+def set_spotify_config(payload: SpotifyConfigRequest):
+    """Save Spotify Client ID and Client Secret."""
+    try:
+        spotify_client.set_config(
+            client_id=payload.client_id,
+            client_secret=payload.client_secret,
+            redirect_uri=payload.redirect_uri,
+        )
+        return {"success": True, "configured": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/spotify/auth-url")
+def get_spotify_auth_url():
+    """Generate the Spotify OAuth authorization URL."""
+    try:
+        url = spotify_client.get_auth_url()
+        return {"auth_url": url}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/spotify/callback")
+def spotify_callback(code: Optional[str] = None, error: Optional[str] = None):
+    """Handle the OAuth2 callback from Spotify."""
+    if error:
+        html = f"""
+        <html>
+        <head><title>Spotify Connection Error</title></head>
+        <body style="background:#121212;color:#fff;font-family:sans-serif;padding:40px;text-align:center;">
+          <h2 style="color:#ff4444;">Spotify Connection Denied</h2>
+          <p>{error}</p>
+          <button onclick="window.close()" style="background:#333;color:#fff;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">Close Window</button>
+        </body>
+        </html>
+        """
+        return Response(content=html, media_type="text/html")
+
+    if not code:
+        raise HTTPException(status_code=400, detail="Authorization code is missing.")
+
+    try:
+        spotify_client.exchange_code(code)
+        html = """
+        <html>
+        <head><title>Spotify Connected</title></head>
+        <body style="background:#121212;color:#fff;font-family:sans-serif;padding:40px;text-align:center;">
+          <h2 style="color:#1DB954;">Spotify Connected Successfully!</h2>
+          <p>You can close this window now.</p>
+          <script>
+            try {
+              if (window.opener) {
+                window.opener.postMessage({ type: 'SPOTIFY_AUTH_SUCCESS' }, '*');
+                window.close();
+              } else {
+                setTimeout(function() { window.location.href = '/?spotify_connected=1'; }, 1500);
+              }
+            } catch (e) {
+              window.location.href = '/?spotify_connected=1';
+            }
+          </script>
+        </body>
+        </html>
+        """
+        return Response(content=html, media_type="text/html")
+    except Exception as e:
+        html = f"""
+        <html>
+        <head><title>Spotify Connection Error</title></head>
+        <body style="background:#121212;color:#fff;font-family:sans-serif;padding:40px;text-align:center;">
+          <h2 style="color:#ff4444;">Spotify Authentication Failed</h2>
+          <p>{e}</p>
+          <button onclick="window.close()" style="background:#333;color:#fff;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">Close Window</button>
+        </body>
+        </html>
+        """
+        return Response(content=html, media_type="text/html")
+
+
+@app.post("/api/spotify/logout")
+def spotify_logout():
+    """Disconnect Spotify account."""
+    spotify_client.logout()
+    return {"success": True, "message": "Spotify account disconnected."}
+
+
+
+# -----------------------------------------------------------------------------
+# Platform-Agnostic Playlist CRUD Routes (/api/{platform}/playlists)
+# -----------------------------------------------------------------------------
+
+@app.get("/api/{platform}/playlists")
+def list_platform_playlists(platform: str):
+    """List playlists from specified platform ('tidal' or 'spotify')."""
+    target_client = get_platform_client(platform)
+    try:
+        return target_client.list_playlists()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/{platform}/playlists")
+def create_platform_playlist(platform: str, payload: CreatePlaylistRequest):
+    """Create a new playlist on specified platform ('tidal' or 'spotify')."""
+    target_client = get_platform_client(platform)
+    try:
+        return target_client.create_playlist(title=payload.name, description=payload.description or "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/{platform}/playlists/{playlist_id}")
+def get_platform_playlist_details(platform: str, playlist_id: str):
+    """Get playlist details and tracks from specified platform ('tidal' or 'spotify')."""
+    target_client = get_platform_client(platform)
+    try:
+        return target_client.get_playlist_details(playlist_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.put("/api/{platform}/playlists/{playlist_id}")
+@app.patch("/api/{platform}/playlists/{playlist_id}")
+def rename_platform_playlist(platform: str, playlist_id: str, payload: RenamePlaylistRequest):
+    """Rename a playlist on specified platform ('tidal' or 'spotify')."""
+    target_client = get_platform_client(platform)
+    try:
+        return target_client.rename_playlist(
+            playlist_id=playlist_id,
+            new_title=payload.name,
+            new_description=payload.description,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/{platform}/playlists/{playlist_id}")
+def delete_platform_playlist(platform: str, playlist_id: str):
+    """Delete a playlist on specified platform ('tidal' or 'spotify')."""
+    target_client = get_platform_client(platform)
+    try:
+        target_client.delete_playlist(playlist_id)
+        return {"success": True, "message": f"Playlist {playlist_id} deleted."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/{platform}/playlists/{playlist_id}/reorder")
+def reorder_platform_track(platform: str, playlist_id: str, payload: ReorderTrackRequest):
+    """Reorder track within playlist on specified platform."""
+    target_client = get_platform_client(platform)
+    try:
+        if platform.lower() == "spotify":
+            ok = target_client.reorder_tracks(playlist_id, payload.from_index, payload.to_index)
+        else:
+            ok = target_client.reorder_track(playlist_id, payload.from_index, payload.to_index)
+        return {"success": ok, "message": f"Track moved from {payload.from_index} to {payload.to_index}"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/{platform}/playlists/{playlist_id}/tracks")
+def remove_platform_tracks(platform: str, playlist_id: str, payload: RemoveTracksRequest):
+    """Remove tracks from playlist on specified platform."""
+    target_client = get_platform_client(platform)
+    try:
+        if payload.indices is not None and len(payload.indices) > 0:
+            removed = target_client.remove_tracks_by_indices(playlist_id, payload.indices)
+        elif payload.track_ids is not None and len(payload.track_ids) > 0:
+            if hasattr(target_client, "remove_tracks_by_ids"):
+                removed = target_client.remove_tracks_by_ids(playlist_id, payload.track_ids)
+            else:
+                raise HTTPException(status_code=400, detail="Removal by ID not supported on this platform.")
+        else:
+            raise HTTPException(status_code=400, detail="Must provide indices or track_ids to remove")
+        return {"success": True, "removed_count": removed}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# Universal Cross-Platform Transfer Route
+# -----------------------------------------------------------------------------
+
+@app.post("/api/transfer/universal")
+def universal_transfer(payload: UniversalTransferRequest):
+    """
+    Universal track transfer:
+    - TIDAL -> TIDAL
+    - Spotify -> Spotify
+    - TIDAL -> Spotify
+    - Spotify -> TIDAL
+    Supports matching via ISRC (primary) and Title + Artist (secondary).
+    """
+    from_p = payload.from_platform.lower().strip()
+    to_p = payload.to_platform.lower().strip()
+    src_client = get_platform_client(from_p)
+    dst_client = get_platform_client(to_p)
+
+    src_details = src_client.get_playlist_details(payload.from_playlist_id)
+    dst_details = dst_client.get_playlist_details(payload.to_playlist_id)
+
+    src_tracks = src_details.get("tracks", [])
+    selected_tracks = [src_tracks[i] for i in payload.indices if 0 <= i < len(src_tracks)]
+    if not selected_tracks:
+        raise HTTPException(status_code=400, detail="No valid tracks selected to transfer.")
+
+    # 1. TIDAL -> TIDAL
+    if from_p == "tidal" and to_p == "tidal":
+        if payload.is_move:
+            res = client.move_tracks(
+                from_playlist=payload.from_playlist_id,
+                to_playlist=payload.to_playlist_id,
+                indices=payload.indices,
+            )
+        else:
+            res = client.copy_tracks(
+                from_playlist=payload.from_playlist_id,
+                to_playlist=payload.to_playlist_id,
+                indices=payload.indices,
+            )
+        return {
+            "success": True,
+            "transferred_count": len(selected_tracks),
+            "unmatched_count": 0,
+            "unmatched_tracks": [],
+            "message": f"Successfully {'moved' if payload.is_move else 'copied'} {len(selected_tracks)} tracks to '{dst_details.get('name')}'!",
+        }
+
+    # 2. Spotify -> Spotify
+    if from_p == "spotify" and to_p == "spotify":
+        uris = [t["uri"] for t in selected_tracks]
+        spotify_client.add_tracks(payload.to_playlist_id, uris)
+        if payload.is_move:
+            spotify_client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
+        return {
+            "success": True,
+            "transferred_count": len(selected_tracks),
+            "unmatched_count": 0,
+            "unmatched_tracks": [],
+            "message": f"Successfully {'moved' if payload.is_move else 'copied'} {len(selected_tracks)} tracks to '{dst_details.get('name')}'!",
+        }
+
+    # 3. TIDAL -> Spotify
+    if from_p == "tidal" and to_p == "spotify":
+        matched_uris = []
+        unmatched = []
+        for t in selected_tracks:
+            m = spotify_client.search_track(isrc=t.get("isrc"), title=t.get("name"), artist=t.get("artist"))
+            if m:
+                matched_uris.append(m["uri"])
+            else:
+                unmatched.append(f"{t.get('name')} - {t.get('artist')}")
+
+        if matched_uris:
+            spotify_client.add_tracks(payload.to_playlist_id, matched_uris)
+            if payload.is_move:
+                client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
+
+        msg = f"Transferred {len(matched_uris)} of {len(selected_tracks)} tracks to Spotify playlist '{dst_details.get('name')}'."
+        if unmatched:
+            msg += f" ({len(unmatched)} unmatched)"
+
+        return {
+            "success": bool(matched_uris),
+            "transferred_count": len(matched_uris),
+            "unmatched_count": len(unmatched),
+            "unmatched_tracks": unmatched,
+            "message": msg,
+        }
+
+    # 4. Spotify -> TIDAL
+    if from_p == "spotify" and to_p == "tidal":
+        matched_ids = []
+        unmatched = []
+        for t in selected_tracks:
+            m = client.search_track(isrc=t.get("isrc"), title=t.get("name"), artist=t.get("artist"))
+            if m:
+                matched_ids.append(m["id"])
+            else:
+                unmatched.append(f"{t.get('name')} - {t.get('artist')}")
+
+        if matched_ids:
+            client.add_tracks(payload.to_playlist_id, matched_ids)
+            if payload.is_move:
+                spotify_client.remove_tracks_by_indices(payload.from_playlist_id, payload.indices)
+
+        msg = f"Transferred {len(matched_ids)} of {len(selected_tracks)} tracks to TIDAL playlist '{dst_details.get('name')}'."
+        if unmatched:
+            msg += f" ({len(unmatched)} unmatched)"
+
+        return {
+            "success": bool(matched_ids),
+            "transferred_count": len(matched_ids),
+            "unmatched_count": len(unmatched),
+            "unmatched_tracks": unmatched,
+            "message": msg,
+        }
 
 
 # -----------------------------------------------------------------------------

@@ -1547,6 +1547,151 @@ body {
   color: var(--text-main);
 }
 
+/* ==========================================================================
+   Spotify & Cross-Platform Styles
+   ========================================================================== */
+
+.service-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 229, 255, 0.15);
+  color: var(--primary);
+}
+
+.spotify-badge {
+  border-color: rgba(29, 185, 84, 0.3) !important;
+}
+
+.spotify-dot {
+  background-color: #1DB954 !important;
+  box-shadow: 0 0 6px #1DB954 !important;
+}
+
+.spotify-tag {
+  background: rgba(29, 185, 84, 0.15) !important;
+  color: #1DB954 !important;
+}
+
+.btn-spotify {
+  background: #1DB954 !important;
+  color: #ffffff !important;
+  border: 1px solid #1ed760 !important;
+  font-weight: 600;
+}
+
+.btn-spotify:hover {
+  background: #1ed760 !important;
+  box-shadow: 0 0 12px rgba(29, 185, 84, 0.4);
+}
+
+.badge-spotify {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1DB954;
+  border: 1px solid rgba(29, 185, 84, 0.3);
+}
+
+/* Platform Tabs Switcher (Panel A & B) */
+.platform-tabs {
+  display: flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.platform-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.platform-tab:hover {
+  color: var(--text-main);
+}
+
+.platform-tab.active {
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.platform-tab.active[data-platform="tidal"] {
+  color: var(--primary);
+  border-color: rgba(0, 229, 255, 0.35);
+}
+
+.platform-tab.active[data-platform="spotify"] {
+  color: #1DB954;
+  border-color: rgba(29, 185, 84, 0.35);
+}
+
+.spotify-icon {
+  color: #1DB954;
+}
+
+/* Spotify Setup Box */
+.spotify-guide-box {
+  background: rgba(29, 185, 84, 0.08);
+  border: 1px solid rgba(29, 185, 84, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.spotify-setup-steps {
+  margin: 8px 0 0 18px;
+  padding: 0;
+  color: var(--text-sub);
+}
+
+.spotify-setup-steps li {
+  margin-bottom: 6px;
+}
+
+.link-cyan {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.unmatched-box {
+  margin-top: 16px;
+  background: rgba(255, 61, 113, 0.08);
+  border: 1px solid rgba(255, 61, 113, 0.25);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+
+.unmatched-box h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+.unmatched-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 .hidden {
   display: none !important;
 }

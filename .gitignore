@@ -12,6 +12,10 @@ __pycache__/
 # Sensitive session files, tokens, and credentials (STRICT - NEVER COMMIT)
 .tidal_session.json
 tidal_session.json
+.spotify_session.json
+spotify_session.json
+.*session*.json
+*session*.json
 *.session.json
 *.session
 *.token
