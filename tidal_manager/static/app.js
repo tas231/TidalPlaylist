@@ -121,6 +121,7 @@ const el = {
   btnSaveSortA: document.getElementById("btn-save-sort-a"),
   selectAllA: document.getElementById("select-all-a"),
   selectedCountA: document.getElementById("selected-count-a"),
+  btnDeleteSelectedA: document.getElementById("btn-delete-selected-a"),
   emptyA: document.getElementById("empty-a"),
   listA: document.getElementById("list-a"),
 
@@ -147,6 +148,7 @@ const el = {
   btnSaveSortB: document.getElementById("btn-save-sort-b"),
   selectAllB: document.getElementById("select-all-b"),
   selectedCountB: document.getElementById("selected-count-b"),
+  btnDeleteSelectedB: document.getElementById("btn-delete-selected-b"),
   emptyB: document.getElementById("empty-b"),
   listB: document.getElementById("list-b"),
 
@@ -1036,6 +1038,7 @@ function updateSelectionCounter(paneKey) {
   const pState = state[paneKey];
   const countEl = isA ? el.selectedCountA : el.selectedCountB;
   const selectAllChk = isA ? el.selectAllA : el.selectAllB;
+  const btnDeleteSelected = isA ? el.btnDeleteSelectedA : el.btnDeleteSelectedB;
 
   const count = pState.selectedIndices.size;
   countEl.textContent = `${count} selected`;
@@ -1043,6 +1046,15 @@ function updateSelectionCounter(paneKey) {
   const totalVisible = pState.filteredTracks.length;
   selectAllChk.checked = totalVisible > 0 && count === totalVisible;
   selectAllChk.indeterminate = count > 0 && count < totalVisible;
+
+  if (btnDeleteSelected) {
+    if (count > 0) {
+      btnDeleteSelected.textContent = `🗑 Remove (${count})`;
+      btnDeleteSelected.classList.remove("hidden");
+    } else {
+      btnDeleteSelected.classList.add("hidden");
+    }
+  }
 }
 
 // Drag & Drop Pane Listeners
@@ -1165,17 +1177,13 @@ function showTransferReport(res) {
   el.modalTransferReport.classList.remove("hidden");
 }
 
-async function removeSelectedTracks() {
-  let paneKey = null;
-  if (state.paneA.selectedIndices.size > 0) paneKey = "paneA";
-  else if (state.paneB.selectedIndices.size > 0) paneKey = "paneB";
-
-  if (!paneKey) {
-    showToast("Select tracks in Panel A or Panel B to remove", "info");
+async function removeSelectedTracksFromPane(paneKey) {
+  const pState = state[paneKey];
+  if (!pState.details || pState.selectedIndices.size === 0) {
+    showToast("No tracks selected to remove", "info");
     return;
   }
 
-  const pState = state[paneKey];
   const indices = Array.from(pState.selectedIndices);
   const plName = pState.details?.name || "this playlist";
 
@@ -1189,6 +1197,7 @@ async function removeSelectedTracks() {
           body: JSON.stringify({ indices: indices }),
         });
         showToast(`Removed ${indices.length} tracks from '${plName}'`, "success");
+        pState.selectedIndices.clear();
         await loadPlaylistDetails(paneKey, pState.playlistId);
         await refreshDropdownCounts();
       } catch (err) {
@@ -1196,6 +1205,16 @@ async function removeSelectedTracks() {
       }
     }
   );
+}
+
+async function removeSelectedTracks() {
+  if (state.paneA.selectedIndices.size > 0) {
+    await removeSelectedTracksFromPane("paneA");
+  } else if (state.paneB.selectedIndices.size > 0) {
+    await removeSelectedTracksFromPane("paneB");
+  } else {
+    showToast("Select tracks in Panel A or Panel B to remove", "info");
+  }
 }
 
 async function handleRemoveSingleTrack(paneKey, trackIndex, trackTitle) {
@@ -2173,6 +2192,12 @@ function setupEventListeners() {
   el.btnCopyBToA.addEventListener("click", () => transferTracks("paneB", "paneA", false));
   el.btnMoveBToA.addEventListener("click", () => transferTracks("paneB", "paneA", true));
   el.btnDeleteSelected.addEventListener("click", removeSelectedTracks);
+  if (el.btnDeleteSelectedA) {
+    el.btnDeleteSelectedA.addEventListener("click", () => removeSelectedTracksFromPane("paneA"));
+  }
+  if (el.btnDeleteSelectedB) {
+    el.btnDeleteSelectedB.addEventListener("click", () => removeSelectedTracksFromPane("paneB"));
+  }
 
   // Catalog Search Input
   el.catalogSearchInput.addEventListener("input", (e) => handleSearchInput(e.target.value));

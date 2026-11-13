@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-11-14
+
+### Added
+- **Multi-Selection Delete Button (`🗑 Remove (N)`)**:
+  - Added a dedicated delete trash bin button directly in each panel's selection toolbar right next to the selected count (e.g. `4 selected`).
+  - Automatically appears whenever one or multiple tracks are selected in Panel A or Panel B.
+  - Allows deleting multiple selected tracks directly from within the active playlist panel without needing to use the center transfer dock.
+
 ## [1.4.1] - 2026-11-13
 
 ### Fixed & Improved
