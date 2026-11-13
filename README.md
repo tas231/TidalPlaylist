@@ -59,46 +59,48 @@ Manage in-platform playlists or transfer tracks across platforms in both directi
 
 ---
 
-## 🚀 Quick Start & Platform Setup
+## 🚀 Installation & Launch Options
 
-### 📦 Prerequisites (All Platforms)
+Choose whichever method is easiest for you:
 
-- **Python 3.9 or higher** (Download from [python.org](https://www.python.org/downloads/)).
-  - *Windows users:* Remember to check the box **"Add Python to PATH"** during installation.
-  - *Linux users (Ubuntu/Debian):* Ensure venv is installed: `sudo apt install python3 python3-venv python3-pip`.
-- Any modern web browser (Chrome, Edge, Firefox, Safari, Brave).
-- No Node.js, Docker, or external databases required!
+### 📦 Option 1: Standalone Desktop App (No Python Required)
+If you don't have Python installed and want a simple 1-click experience:
+1. Head over to the **[Latest Releases](https://github.com/tas231/TidalPlaylist/releases)** page on GitHub.
+2. Download the pre-built archive for your operating system:
+   - **Windows**: `TidalPlaylistManager-Windows-x64.zip` (extract and double-click `TidalPlaylistManager.exe`)
+   - **macOS**: `TidalPlaylistManager-macOS.zip` (extract and open `TidalPlaylistManager`)
+   - **Linux**: `TidalPlaylistManager-Linux-x64.tar.gz`
+3. The app starts locally and immediately opens the Web UI in your default browser!
 
 ---
 
-### 🖥️ How to Launch
-
-#### 🍎 macOS
-In Finder, simply **double-click** either:
-- **`Start.command`** (Recommended for Mac)
-- or **`Tidal Playlist Manager.app`**
-
-Or from Terminal:
+### 🐍 Option 2: Install via pip / pipx (PyPI)
+If you have Python 3.9+ installed:
 ```bash
-./run.sh
+# Install globally or in your environment:
+pip install tidal-playlist-manager
+
+# Or run instantly in an isolated environment with pipx:
+pipx run tidal-playlist-manager
 ```
-
-#### 🪟 Windows
-In Windows Explorer, simply **double-click**:
-- **`run.bat`**
-
-Or in PowerShell / Command Prompt:
-```cmd
-run.bat
-```
-*(On the first run, `run.bat` will automatically set up the `.venv` virtual environment and install all dependencies).*
-
-#### 🐧 Linux
-Open a terminal in the project directory:
+Then start the app anytime simply by typing:
 ```bash
-chmod +x run.sh
-./run.sh
+tidal-manager
 ```
+
+---
+
+### 💻 Option 3: Run from Git Source Checkout
+
+#### Prerequisites
+- **Python 3.9 or higher** ([python.org](https://www.python.org/downloads/)).
+  - *Windows users:* Make sure to check **"Add Python to PATH"** during setup.
+  - *Linux users (Ubuntu/Debian):* `sudo apt install python3 python3-venv python3-pip`.
+
+#### Launching from source:
+- **🍎 macOS**: Double-click `Start.command` or `Tidal Playlist Manager.app` (or `./run.sh` in Terminal).
+- **🪟 Windows**: Double-click `run.bat` in File Explorer.
+- **🐧 Linux**: Run `chmod +x run.sh && ./run.sh` in Terminal.
 
 ---
 

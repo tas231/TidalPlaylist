@@ -775,7 +775,15 @@ def get_track_preview(track_id: str):
 # Static Frontend Serving
 # -----------------------------------------------------------------------------
 
-static_dir = Path(__file__).resolve().parent / "static"
+import sys
+
+if hasattr(sys, "_MEIPASS"):
+    static_dir = Path(sys._MEIPASS) / "tidal_manager" / "static"
+    if not static_dir.exists():
+        static_dir = Path(sys._MEIPASS) / "static"
+else:
+    static_dir = Path(__file__).resolve().parent / "static"
+
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 

@@ -407,7 +407,7 @@ def cmd_web(args: argparse.Namespace) -> None:
     url = f"http://{host}:{port}"
 
     print(f"\n=======================================================")
-    print(f"  TIDAL Playlist Manager Web UI v1.1")
+    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.3.0")
     print(f"  Running at: {url}")
     print(f"  Press Ctrl+C to stop the server.")
     print(f"=======================================================\n")
@@ -418,7 +418,7 @@ def cmd_web(args: argparse.Namespace) -> None:
         except Exception:
             pass
 
-    uvicorn.run("tidal_manager.server:app", host=host, port=port, reload=True, log_level="info")
+    uvicorn.run(app, host=host, port=port, reload=False, log_level="info")
 
 
 def build_parser() -> argparse.ArgumentParser:
