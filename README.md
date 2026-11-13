@@ -77,16 +77,30 @@ If you don't have Python installed and want a simple 1-click experience:
 
 ### 🐍 Option 2: Install via pip / pipx (PyPI)
 If you have Python 3.9+ installed:
-```bash
-# Install globally or in your environment:
-pip install tidal-playlist-manager
 
-# Or run instantly in an isolated environment with pipx:
-pipx run tidal-playlist-manager
+#### Installation
+```bash
+# Recommended: Install in an isolated environment with pipx:
+pipx install tidal-playlist-manager
+
+# Or install in your active Python environment:
+pip install tidal-playlist-manager
 ```
-Then start the app anytime simply by typing:
+
+#### Launch
+Start the app anytime from any terminal:
 ```bash
 tidal-manager
+```
+
+#### How to update to the latest version:
+To update your installation to the latest release on PyPI:
+```bash
+# For pipx users (bypasses local cache to fetch the newest release immediately):
+pipx upgrade --pip-args="--no-cache-dir" tidal-playlist-manager
+
+# For standard pip users:
+pip install --upgrade --no-cache-dir tidal-playlist-manager
 ```
 
 ---
