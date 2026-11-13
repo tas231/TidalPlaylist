@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-11-13
+
+### Fixed & Improved
+- **Playlist Header Menu Layout & Wrapping**:
+  - Restructured the playlist meta card into clean, multi-row layout:
+    - Row 1: Playlist Title with rename (`✎`) and delete (`🗑`) buttons pinned at top-right.
+    - Row 2: Playlist description.
+    - Row 3: Stats badges (track count, duration, duplicate count).
+    - Row 4: Dedicated action pill buttons toolbar (`Split`, `Duplicates`, `Remove Local`, `Shuffle`, `Export`) with `flex-wrap: wrap;`.
+  - Fixes action buttons being cut off or hidden on split screens and restores visibility of playlist title and delete playlist button.
+- **Track Row Delete Button (`🗑`)**:
+  - Added a dedicated delete trash bin button directly on each individual track row.
+  - Allows 1-click removal of any song directly from the playlist with safety confirmation dialog, without needing to select checkboxes and navigate to the center dock.
+
 ## [1.4.0] - 2026-11-13
 
 ### Added

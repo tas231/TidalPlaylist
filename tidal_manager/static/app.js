@@ -851,12 +851,19 @@ function renderTracksList(paneKey) {
         </div>
         <span class="track-meta" title="${escapeHtml(t.artist)} • ${escapeHtml(t.album)}">${escapeHtml(t.artist)} • ${escapeHtml(t.album)}</span>
       </div>
-      <span class="track-dur">${t.duration_formatted}</span>
+      <div class="track-right">
+        <span class="track-dur">${t.duration_formatted}</span>
+        <button type="button" class="btn-delete-track" title="Remove track from playlist" data-index="${t.index}">🗑</button>
+      </div>
     `;
 
     // Row click selection
     row.addEventListener("click", (evt) => {
-      if (evt.target.closest(".thumb-wrap") || evt.target.type === "checkbox") return;
+      if (
+        evt.target.closest(".thumb-wrap") ||
+        evt.target.type === "checkbox" ||
+        evt.target.closest(".btn-delete-track")
+      ) return;
       const chk = row.querySelector(".track-checkbox");
       chk.checked = !chk.checked;
       toggleTrackSelection(paneKey, t.index);
@@ -868,6 +875,15 @@ function renderTracksList(paneKey) {
       evt.stopPropagation();
       toggleTrackSelection(paneKey, t.index);
     });
+
+    // Delete track button click
+    const btnTrackDelete = row.querySelector(".btn-delete-track");
+    if (btnTrackDelete) {
+      btnTrackDelete.addEventListener("click", (evt) => {
+        evt.stopPropagation();
+        handleRemoveSingleTrack(paneKey, t.index, t.name);
+      });
+    }
 
     // Play button on thumbnail
     const thumbWrap = row.querySelector(".thumb-wrap");
@@ -1182,6 +1198,34 @@ async function removeSelectedTracks() {
   );
 }
 
+async function handleRemoveSingleTrack(paneKey, trackIndex, trackTitle) {
+  const pState = state[paneKey];
+  if (!pState.details) return;
+
+  const plName = pState.details?.name || "this playlist";
+  const displayTitle = trackTitle ? `'${trackTitle}'` : "this track";
+
+  openConfirmModal(
+    "Remove Track from Playlist",
+    `Are you sure you want to remove ${displayTitle} from '${plName}'?`,
+    async () => {
+      try {
+        await api(`/api/${pState.platform}/playlists/${pState.playlistId}/tracks`, {
+          method: "DELETE",
+          body: JSON.stringify({ indices: [trackIndex] }),
+        });
+        showToast(`Removed ${displayTitle} from '${plName}'`, "success");
+        pState.selectedIndices.delete(trackIndex);
+        await loadPlaylistDetails(paneKey, pState.playlistId);
+        await refreshDropdownCounts();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+  );
+}
+
+
 async function refreshDropdownCounts() {
   await Promise.all([
     loadPanePlaylists("paneA"),
@@ -1380,6 +1424,7 @@ async function submitRemoveLocalTracks() {
     }
   );
 }
+
 
 
 // ============================================================================
