@@ -1402,31 +1402,185 @@ body {
 .duplicates-list-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 280px;
+  gap: 10px;
+  max-height: 380px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .dup-group-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dup-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 .dup-group-title {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--primary);
-  margin-bottom: 6px;
+}
+
+.dup-group-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background-color: var(--border);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.dup-group-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .dup-item {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  font-size: 0.85rem;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 3px 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.dup-item-orig {
+  border-color: rgba(34, 197, 94, 0.25);
+  background-color: rgba(34, 197, 94, 0.05);
+}
+
+.dup-item-duplicate.dup-checked-remove {
+  border-color: rgba(239, 68, 68, 0.25);
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.dup-item-duplicate.dup-unchecked-keep {
+  border-color: rgba(34, 197, 94, 0.25);
+  background-color: rgba(34, 197, 94, 0.05);
+}
+
+.dup-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dup-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.dup-keep-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dup-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--danger);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dup-item-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.dup-item-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dup-item-index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.dup-item-name {
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dup-item-duration {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.dup-item-album {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.badge-status-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-status-pill.badge-keep {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-status-pill.badge-remove {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-swap-dup {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+}
+.btn-swap-dup:hover {
+  color: var(--primary);
+  background-color: var(--border);
 }
 
 /* Export Radio Cards */

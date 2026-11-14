@@ -658,8 +658,15 @@ class TidalClient:
                 if group_key not in groups:
                     first_idx = seen_normalized.get(group_key, seen_ids.get(tid))
                     first_track = next((x for x in tracks if x["index"] == first_idx), None)
-                    groups[group_key] = [first_track] if first_track else []
-                groups[group_key].append(t)
+                    if first_track:
+                        first_copy = dict(first_track)
+                        first_copy["is_duplicate"] = False
+                        groups[group_key] = [first_copy]
+                    else:
+                        groups[group_key] = []
+                dup_copy = dict(t)
+                dup_copy["is_duplicate"] = True
+                groups[group_key].append(dup_copy)
 
         formatted_groups = [
             {"key": k, "tracks": v, "count": len(v)}
@@ -675,16 +682,25 @@ class TidalClient:
             "groups": formatted_groups,
         }
 
-    def clean_duplicates(self, playlist_id: str) -> Dict[str, Any]:
-        """Remove duplicate tracks from a playlist, keeping the first occurrence."""
-        dup_info = self.find_duplicates(playlist_id)
-        dup_indices = dup_info["duplicate_indices"]
+    def clean_duplicates(
+        self, playlist_id: str, indices: Optional[Sequence[int]] = None
+    ) -> Dict[str, Any]:
+        """Remove duplicate tracks from a playlist.
+        
+        If `indices` is provided, remove only those specific indices.
+        Otherwise, find all duplicates and remove them, keeping the first occurrence.
+        """
+        if indices is not None:
+            dup_indices = sorted(set(indices))
+        else:
+            dup_info = self.find_duplicates(playlist_id)
+            dup_indices = dup_info["duplicate_indices"]
 
         if not dup_indices:
             return {
                 "success": True,
                 "removed_count": 0,
-                "message": "No duplicates found.",
+                "message": "No duplicates selected to remove.",
             }
 
         self.remove_tracks_by_indices(playlist_id, dup_indices)

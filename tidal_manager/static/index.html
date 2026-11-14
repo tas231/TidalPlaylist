@@ -464,14 +464,29 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="dup-pl-id">
+        <input type="hidden" id="dup-platform">
         <p class="modal-intro">
-          The following tracks in <strong id="dup-target-name">Playlist</strong> appear multiple times (by exact ID or title & artist match):
+          Review detected duplicates in <strong id="dup-target-name">Playlist</strong>.
+          By default, all duplicate copies are selected for removal and the original is kept.
+          Uncheck any version you want to keep (e.g. remasters, live, or alternative versions):
         </p>
+
+        <div class="local-matches-toolbar" style="margin-bottom: 10px;">
+          <div class="local-matches-summary">
+            <span id="dup-selected-summary">0 duplicates selected for removal</span>
+          </div>
+          <div class="local-matches-actions">
+            <button type="button" id="btn-dup-select-all" class="btn-link">Select All</button>
+            <span style="color: var(--border);">|</span>
+            <button type="button" id="btn-dup-deselect-all" class="btn-link">Deselect All</button>
+          </div>
+        </div>
+
         <div id="duplicates-list" class="duplicates-list-container"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" data-close="modal-duplicates">Cancel</button>
-        <button id="btn-submit-clean-dups" class="btn btn-danger">Remove All Duplicates</button>
+        <button id="btn-submit-clean-dups" class="btn btn-danger">Remove Selected Duplicates</button>
       </div>
     </div>
   </div>

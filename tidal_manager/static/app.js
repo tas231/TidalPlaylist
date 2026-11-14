@@ -177,8 +177,12 @@ const el = {
 
   modalDuplicates: document.getElementById("modal-duplicates"),
   dupPlId: document.getElementById("dup-pl-id"),
+  dupPlatform: document.getElementById("dup-platform"),
   dupTargetName: document.getElementById("dup-target-name"),
   dupBadgeCount: document.getElementById("dup-badge-count"),
+  dupSelectedSummary: document.getElementById("dup-selected-summary"),
+  btnDupSelectAll: document.getElementById("btn-dup-select-all"),
+  btnDupDeselectAll: document.getElementById("btn-dup-deselect-all"),
   duplicatesList: document.getElementById("duplicates-list"),
   btnSubmitCleanDups: document.getElementById("btn-submit-clean-dups"),
 
@@ -684,10 +688,11 @@ async function loadPlaylistDetails(paneKey, playlistId) {
 
 async function checkDuplicatesBackground(paneKey, playlistId) {
   try {
-    const res = await api(`/api/playlists/${playlistId}/duplicates`);
+    const pState = state[paneKey];
+    const platform = pState.platform || "tidal";
+    const res = await api(`/api/${platform}/playlists/${playlistId}/duplicates`);
     const isA = paneKey === "paneA";
     const badgeDup = isA ? el.badgeDupA : el.badgeDupB;
-    const pState = state[paneKey];
 
     pState.duplicateIndices = new Set(res.duplicate_indices || []);
 
@@ -1267,6 +1272,8 @@ async function refreshDropdownCounts() {
 // 1. Duplicates Finder & Cleaner
 // ============================================================================
 
+let currentDuplicatesGroups = [];
+
 async function openDuplicatesModal(paneKey) {
   const pState = state[paneKey];
   if (!pState.details) {
@@ -1274,31 +1281,28 @@ async function openDuplicatesModal(paneKey) {
     return;
   }
 
+  const platform = pState.platform || "tidal";
+  const playlistId = pState.playlistId;
+
   try {
     showToast("Checking playlist for duplicate tracks...", "info");
-    const data = await api(`/api/playlists/${pState.playlistId}/duplicates`);
+    const data = await api(`/api/${platform}/playlists/${playlistId}/duplicates`);
 
-    el.dupPlId.value = pState.playlistId;
+    el.dupPlId.value = playlistId;
+    el.dupPlatform.value = platform;
     el.dupTargetName.textContent = `'${pState.details.name}'`;
-    el.dupBadgeCount.textContent = `${data.duplicate_count} Duplicates`;
-
     el.duplicatesList.innerHTML = "";
+    currentDuplicatesGroups = data.groups || [];
 
-    if (data.duplicate_count === 0) {
+    if (data.duplicate_count === 0 || currentDuplicatesGroups.length === 0) {
+      el.dupBadgeCount.textContent = "0 Duplicates";
+      if (el.dupSelectedSummary) el.dupSelectedSummary.textContent = "0 duplicates found in this playlist.";
       el.duplicatesList.innerHTML = '<div class="tracks-empty" style="padding: 24px;">✨ No duplicate tracks found in this playlist!</div>';
       el.btnSubmitCleanDups.disabled = true;
+      el.btnSubmitCleanDups.textContent = "No Duplicates to Remove";
     } else {
-      el.btnSubmitCleanDups.disabled = false;
-      data.groups.forEach((grp) => {
-        const card = document.createElement("div");
-        card.className = "dup-group-card";
-        let tracksHtml = "";
-        grp.tracks.forEach((t) => {
-          tracksHtml += `<div class="dup-item"><span>#${t.index + 1} - ${escapeHtml(t.name)}</span> <span>${t.duration_formatted}</span></div>`;
-        });
-        card.innerHTML = `<div class="dup-group-title">${escapeHtml(grp.key)} (${grp.count} copies)</div>${tracksHtml}`;
-        el.duplicatesList.appendChild(card);
-      });
+      renderDuplicatesGroups(currentDuplicatesGroups);
+      updateDuplicatesSubmitButton();
     }
 
     el.modalDuplicates.classList.remove("hidden");
@@ -1307,17 +1311,169 @@ async function openDuplicatesModal(paneKey) {
   }
 }
 
+function renderDuplicatesGroups(groups) {
+  el.duplicatesList.innerHTML = "";
+
+  groups.forEach((grp, grpIndex) => {
+    const card = document.createElement("div");
+    card.className = "dup-group-card";
+    card.setAttribute("data-group-index", grpIndex);
+
+    const orig = grp.tracks[0];
+    const dups = grp.tracks.slice(1);
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "dup-group-header";
+    header.innerHTML = `
+      <span class="dup-group-title">${escapeHtml(grp.key)}</span>
+      <span class="dup-group-count">${grp.count} copies in playlist</span>
+    `;
+    card.appendChild(header);
+
+    const tracksContainer = document.createElement("div");
+    tracksContainer.className = "dup-group-tracks";
+
+    // Original track row
+    if (orig) {
+      const origRow = document.createElement("div");
+      origRow.className = "dup-item dup-item-orig";
+      origRow.innerHTML = `
+        <div class="dup-item-left">
+          <span class="dup-keep-icon" title="Kept original copy">✓</span>
+          <div class="dup-item-details">
+            <div class="dup-item-title-line">
+              <span class="dup-item-index">#${orig.index + 1}</span>
+              <span class="dup-item-name">${escapeHtml(orig.name)}</span>
+              <span class="dup-item-duration">${orig.duration_formatted || ""}</span>
+            </div>
+            ${orig.album ? `<div class="dup-item-album">💿 ${escapeHtml(orig.album)}</div>` : ""}
+          </div>
+        </div>
+        <div class="dup-item-right">
+          <span class="badge-status-pill badge-keep">Original (Kept)</span>
+        </div>
+      `;
+      tracksContainer.appendChild(origRow);
+    }
+
+    // Duplicate rows
+    dups.forEach((dup, dupOffset) => {
+      const dupIndexInGrp = dupOffset + 1;
+      const row = document.createElement("div");
+      row.className = "dup-item dup-item-duplicate dup-checked-remove";
+      row.setAttribute("data-index", dup.index);
+
+      row.innerHTML = `
+        <div class="dup-item-left">
+          <input type="checkbox" class="dup-checkbox" data-index="${dup.index}" checked title="Check to remove this duplicate, uncheck to keep this version">
+          <div class="dup-item-details">
+            <div class="dup-item-title-line">
+              <span class="dup-item-index">#${dup.index + 1}</span>
+              <span class="dup-item-name">${escapeHtml(dup.name)}</span>
+              <span class="dup-item-duration">${dup.duration_formatted || ""}</span>
+            </div>
+            ${dup.album ? `<div class="dup-item-album">💿 ${escapeHtml(dup.album)}</div>` : ""}
+          </div>
+        </div>
+        <div class="dup-item-right">
+          <button type="button" class="btn btn-ghost btn-xs btn-swap-dup" title="Keep this version and mark the other as duplicate">Keep this instead</button>
+          <span class="badge-status-pill badge-remove" id="dup-badge-${dup.index}">🗑 Remove</span>
+        </div>
+      `;
+
+      // Checkbox listener
+      const cb = row.querySelector(".dup-checkbox");
+      cb.addEventListener("change", () => {
+        const badge = row.querySelector(".badge-status-pill");
+        if (cb.checked) {
+          row.classList.remove("dup-unchecked-keep");
+          row.classList.add("dup-checked-remove");
+          badge.className = "badge-status-pill badge-remove";
+          badge.textContent = "🗑 Remove";
+        } else {
+          row.classList.remove("dup-checked-remove");
+          row.classList.add("dup-unchecked-keep");
+          badge.className = "badge-status-pill badge-keep";
+          badge.textContent = "✓ Keeping";
+        }
+        updateDuplicatesSubmitButton();
+      });
+
+      // Swap button listener
+      const btnSwap = row.querySelector(".btn-swap-dup");
+      btnSwap.addEventListener("click", () => {
+        // Swap grp.tracks[0] and dup
+        const currentOrig = grp.tracks[0];
+        grp.tracks[0] = dup;
+        grp.tracks[dupIndexInGrp] = currentOrig;
+        grp.tracks[0].is_duplicate = false;
+        grp.tracks[dupIndexInGrp].is_duplicate = true;
+        renderDuplicatesGroups(currentDuplicatesGroups);
+        updateDuplicatesSubmitButton();
+        showToast(`Swapped: Now keeping #${dup.index + 1} (${dup.name})`, "info");
+      });
+
+      tracksContainer.appendChild(row);
+    });
+
+    card.appendChild(tracksContainer);
+    el.duplicatesList.appendChild(card);
+  });
+}
+
+function updateDuplicatesSubmitButton() {
+  const checkedBoxes = el.duplicatesList.querySelectorAll(".dup-checkbox:checked");
+  const count = checkedBoxes.length;
+  const totalBoxes = el.duplicatesList.querySelectorAll(".dup-checkbox").length;
+
+  el.dupBadgeCount.textContent = `${count} Selected`;
+
+  if (count === 0) {
+    el.btnSubmitCleanDups.disabled = true;
+    el.btnSubmitCleanDups.textContent = "Remove Selected Duplicates";
+    if (el.dupSelectedSummary) {
+      el.dupSelectedSummary.textContent = "0 duplicates selected (all versions will be kept)";
+    }
+  } else {
+    el.btnSubmitCleanDups.disabled = false;
+    el.btnSubmitCleanDups.textContent = `Remove ${count} Selected Duplicate${count > 1 ? "s" : ""}`;
+    if (el.dupSelectedSummary) {
+      el.dupSelectedSummary.textContent = `${count} of ${totalBoxes} duplicates selected for removal`;
+    }
+  }
+}
+
 async function submitCleanDuplicates() {
   const playlistId = el.dupPlId.value;
+  const platform = el.dupPlatform.value || "tidal";
+  const checkedBoxes = el.duplicatesList.querySelectorAll(".dup-checkbox:checked");
+  const indices = Array.from(checkedBoxes).map((cb) => parseInt(cb.getAttribute("data-index"), 10));
+
+  if (indices.length === 0) {
+    showToast("No duplicates selected for removal.", "info");
+    return;
+  }
+
   try {
-    const res = await api(`/api/playlists/${playlistId}/duplicates/clean`, { method: "POST" });
-    showToast(res.message, "success");
+    el.btnSubmitCleanDups.disabled = true;
+    el.btnSubmitCleanDups.textContent = "Removing...";
+
+    const res = await api(`/api/${platform}/playlists/${playlistId}/duplicates/clean`, {
+      method: "POST",
+      body: JSON.stringify({ indices }),
+    });
+
+    showToast(res.message || `Removed ${indices.length} duplicate track(s).`, "success");
     closeModal(el.modalDuplicates);
+
     if (state.paneA.playlistId === playlistId) await loadPlaylistDetails("paneA", playlistId);
     if (state.paneB.playlistId === playlistId) await loadPlaylistDetails("paneB", playlistId);
     await refreshDropdownCounts();
   } catch (err) {
     showToast(err.message, "error");
+  } finally {
+    el.btnSubmitCleanDups.disabled = false;
   }
 }
 
@@ -2254,6 +2410,42 @@ function setupEventListeners() {
   el.btnSubmitRename.addEventListener("click", submitRenamePlaylist);
   el.btnSubmitSplit.addEventListener("click", submitAutoSplit);
   el.btnSubmitCleanDups.addEventListener("click", submitCleanDuplicates);
+  if (el.btnDupSelectAll) {
+    el.btnDupSelectAll.addEventListener("click", () => {
+      el.duplicatesList.querySelectorAll(".dup-item-duplicate").forEach((row) => {
+        const cb = row.querySelector(".dup-checkbox");
+        if (cb) {
+          cb.checked = true;
+          row.classList.remove("dup-unchecked-keep");
+          row.classList.add("dup-checked-remove");
+          const badge = row.querySelector(".badge-status-pill");
+          if (badge) {
+            badge.className = "badge-status-pill badge-remove";
+            badge.textContent = "🗑 Remove";
+          }
+        }
+      });
+      updateDuplicatesSubmitButton();
+    });
+  }
+  if (el.btnDupDeselectAll) {
+    el.btnDupDeselectAll.addEventListener("click", () => {
+      el.duplicatesList.querySelectorAll(".dup-item-duplicate").forEach((row) => {
+        const cb = row.querySelector(".dup-checkbox");
+        if (cb) {
+          cb.checked = false;
+          row.classList.remove("dup-checked-remove");
+          row.classList.add("dup-unchecked-keep");
+          const badge = row.querySelector(".badge-status-pill");
+          if (badge) {
+            badge.className = "badge-status-pill badge-keep";
+            badge.textContent = "✓ Keeping";
+          }
+        }
+      });
+      updateDuplicatesSubmitButton();
+    });
+  }
   el.btnSubmitExport.addEventListener("click", submitExportPlaylist);
   el.btnSubmitImport.addEventListener("click", submitImportPlaylist);
   el.btnSubmitMerge.addEventListener("click", submitMergePlaylists);

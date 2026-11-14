@@ -120,6 +120,15 @@ class TestApiEndpoints(unittest.TestCase):
             self.assertEqual(res.status_code, 200)
             self.assertEqual(res.json()["duplicate_count"], 1)
 
+    def test_clean_duplicates_endpoint_selective(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "clean_duplicates", return_value={"success": True, "removed_count": 1, "message": "Removed 1 duplicate track(s)."}) as mock_clean:
+            res = self.api_client.post("/api/playlists/p1/duplicates/clean", json={"indices": [2]})
+            self.assertEqual(res.status_code, 200)
+            self.assertTrue(res.json()["success"])
+            self.assertEqual(res.json()["removed_count"], 1)
+            mock_clean.assert_called_once_with("p1", indices=[2])
+
     def test_export_endpoint(self):
         with patch.object(client, "is_logged_in", return_value=True), \
              patch.object(client, "export_playlist", return_value=('{"test": 1}', "application/json", "test.json")):

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-14
+
+### Added
+- **Selective Duplicates Removal with Checkboxes & Version Swapping**:
+  - The Duplicates Cleaner modal now presents interactive tick marks (checkboxes) before each detected duplicate track.
+  - By default, all duplicate copies are selected for removal and the original is marked `Original (Kept)`.
+  - Users can uncheck any duplicate version they want to keep in the playlist (e.g., remasters, acoustic, live, or alternate versions).
+  - Added dynamic status badges: `🗑 Remove` (red when selected for deletion) and `✓ Keeping` (green when unselected).
+  - Added a "Keep this instead" button on every duplicate row to easily swap which copy is treated as original and preserved.
+  - Added `Select All` and `Deselect All` bulk actions to the duplicates toolbar.
+  - Backend API (`POST /api/playlists/{playlist_id}/duplicates/clean` and `/api/{platform}/playlists/{playlist_id}/duplicates/clean`) updated to accept specific `indices` payload while preserving CLI full-clean fallback.
+  - Added duplicate detection and selective cleaning support for Spotify playlists.
+
 ## [1.4.4] - 2026-11-14
 
 ### Added

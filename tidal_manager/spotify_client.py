@@ -9,7 +9,7 @@ import re
 import time
 import urllib.parse
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Union
 
 import requests
 
@@ -599,4 +599,99 @@ class SpotifyClient:
             "preview_url": track.get("preview_url"),
             "platform": "spotify",
             "match_type": match_type,
+        }
+
+    def _normalize_string(self, s: str) -> str:
+        """Normalize string for fuzzy comparison."""
+        if not s:
+            return ""
+        s = s.lower()
+        s = re.sub(r"\s*[\(\[\{].*?[\)\]\}]", "", s)
+        s = re.sub(r"[^\w\s]", "", s)
+        return " ".join(s.split())
+
+    def find_duplicates(self, playlist_id: str) -> Dict[str, Any]:
+        """Find duplicate tracks within a Spotify playlist."""
+        details = self.get_playlist_details(playlist_id)
+        tracks = details.get("tracks", [])
+
+        seen_ids: Dict[str, int] = {}
+        seen_normalized: Dict[str, int] = {}
+        duplicate_indices: Set[int] = set()
+        groups: Dict[str, List[Dict[str, Any]]] = {}
+
+        for t in tracks:
+            idx = t["index"]
+            tid = t.get("id") or ""
+            norm_key = f"{self._normalize_string(t.get('name') or '')} - {self._normalize_string(t.get('artist') or '')}"
+
+            is_dup = False
+            group_key = norm_key or tid
+
+            if tid and tid in seen_ids:
+                is_dup = True
+                duplicate_indices.add(idx)
+            elif tid:
+                seen_ids[tid] = idx
+
+            if norm_key and norm_key in seen_normalized:
+                is_dup = True
+                duplicate_indices.add(idx)
+            elif norm_key:
+                seen_normalized[norm_key] = idx
+
+            if is_dup:
+                if group_key not in groups:
+                    first_idx = seen_normalized.get(group_key, seen_ids.get(tid))
+                    first_track = next((x for x in tracks if x["index"] == first_idx), None)
+                    if first_track:
+                        first_copy = dict(first_track)
+                        first_copy["is_duplicate"] = False
+                        groups[group_key] = [first_copy]
+                    else:
+                        groups[group_key] = []
+                dup_copy = dict(t)
+                dup_copy["is_duplicate"] = True
+                groups[group_key].append(dup_copy)
+
+        formatted_groups = [
+            {"key": k, "tracks": v, "count": len(v)}
+            for k, v in groups.items()
+        ]
+
+        return {
+            "playlist_id": playlist_id,
+            "playlist_name": details.get("name"),
+            "total_tracks": len(tracks),
+            "duplicate_count": len(duplicate_indices),
+            "duplicate_indices": sorted(duplicate_indices),
+            "groups": formatted_groups,
+        }
+
+    def clean_duplicates(
+        self, playlist_id: str, indices: Optional[Sequence[int]] = None
+    ) -> Dict[str, Any]:
+        """Remove duplicate tracks from a Spotify playlist.
+        
+        If `indices` is provided, remove only those specific indices.
+        Otherwise, find all duplicates and remove them, keeping the first occurrence.
+        """
+        if indices is not None:
+            dup_indices = sorted(set(indices))
+        else:
+            dup_info = self.find_duplicates(playlist_id)
+            dup_indices = dup_info["duplicate_indices"]
+
+        if not dup_indices:
+            return {
+                "success": True,
+                "removed_count": 0,
+                "message": "No duplicates selected to remove.",
+            }
+
+        self.remove_tracks_by_indices(playlist_id, dup_indices)
+        return {
+            "success": True,
+            "removed_count": len(dup_indices),
+            "message": f"Successfully removed {len(dup_indices)} duplicate track(s).",
         }

@@ -117,6 +117,10 @@ class RemoveLocalTracksRequest(BaseModel):
     indices: List[int] = Field(..., min_items=1, description="Track indices to remove from playlist")
 
 
+class CleanDuplicatesRequest(BaseModel):
+    indices: Optional[List[int]] = Field(None, description="Specific track indices to remove as duplicates")
+
+
 
 class UniversalTransferRequest(BaseModel):
     from_platform: str = Field(..., description="'tidal' or 'spotify'")
@@ -730,24 +734,41 @@ def split_playlist(playlist_id: str, payload: SplitPlaylistRequest):
 # 1. Duplicate Finder & Cleaner Routes
 # -----------------------------------------------------------------------------
 
-@app.get("/api/playlists/{playlist_id}/duplicates")
-def get_duplicates(playlist_id: str):
-    """Find duplicate tracks in a playlist."""
-    ensure_authenticated()
+@app.get("/api/{platform}/playlists/{playlist_id}/duplicates")
+def get_platform_duplicates(platform: str, playlist_id: str):
+    """Find duplicate tracks in a playlist (TIDAL or Spotify)."""
+    target_client = get_platform_client(platform)
     try:
-        return client.find_duplicates(playlist_id)
+        if hasattr(target_client, "find_duplicates"):
+            return target_client.find_duplicates(playlist_id)
+        raise HTTPException(status_code=400, detail=f"Duplicates not supported on {platform}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/{platform}/playlists/{playlist_id}/duplicates/clean")
+def clean_platform_duplicates(platform: str, playlist_id: str, payload: Optional[CleanDuplicatesRequest] = None):
+    """Remove duplicate tracks in a playlist, either all or specific selected indices."""
+    target_client = get_platform_client(platform)
+    indices = payload.indices if payload else None
+    try:
+        if hasattr(target_client, "clean_duplicates"):
+            return target_client.clean_duplicates(playlist_id, indices=indices)
+        raise HTTPException(status_code=400, detail=f"Duplicates not supported on {platform}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/playlists/{playlist_id}/duplicates")
+def get_duplicates(playlist_id: str):
+    """Legacy route: Find duplicate tracks in TIDAL playlist."""
+    return get_platform_duplicates("tidal", playlist_id)
 
 
 @app.post("/api/playlists/{playlist_id}/duplicates/clean")
-def clean_duplicates(playlist_id: str):
-    """Remove duplicate tracks in a playlist, keeping the first occurrence."""
-    ensure_authenticated()
-    try:
-        return client.clean_duplicates(playlist_id)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+def clean_duplicates(playlist_id: str, payload: Optional[CleanDuplicatesRequest] = None):
+    """Legacy route: Remove duplicate tracks in TIDAL playlist."""
+    return clean_platform_duplicates("tidal", playlist_id, payload)
 
 
 # -----------------------------------------------------------------------------

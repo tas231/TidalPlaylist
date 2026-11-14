@@ -230,6 +230,23 @@ class TestTidalClient(unittest.TestCase):
         self.assertEqual(dummy_pl._tracks[0].id, 10)
         self.assertEqual(dummy_pl._tracks[1].id, 20)
 
+    def test_clean_duplicates_selective(self):
+        t0 = DummyTrack(10, "Blinding Lights", "The Weeknd")
+        t1 = DummyTrack(20, "Starboy", "The Weeknd")
+        t2 = DummyTrack(10, "Blinding Lights", "The Weeknd")
+        t3 = DummyTrack(30, "Starboy (Radio Edit)", "The Weeknd")
+
+        dummy_pl = DummyPlaylist("pl-dup2", "My Playlist", [t0, t1, t2, t3])
+        self.client.get_playlist_obj = MagicMock(return_value=dummy_pl)
+
+        # Remove ONLY track 2 (exact ID dup), keeping track 3 (radio edit)
+        clean_res = self.client.clean_duplicates("pl-dup2", indices=[2])
+        self.assertTrue(clean_res["success"])
+        self.assertEqual(clean_res["removed_count"], 1)
+        self.assertEqual(len(dummy_pl._tracks), 3)
+        remaining_ids = [t.id for t in dummy_pl._tracks]
+        self.assertEqual(remaining_ids, [10, 20, 30])
+
     def test_export_and_import_json(self):
         t0 = DummyTrack(101, "Song A", "Artist A", 200)
         t1 = DummyTrack(102, "Song B", "Artist B", 180)
