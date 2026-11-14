@@ -10,7 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Flexible CSV / Text Import with Title & Artist Catalog Matching**:
   - CSV files now only require **Title & Artist** (e.g. `Titel` & `Interpret` or `Title` & `Artist`) to import playlists.
-  - All other fields (Album, Duration, Track#, Genre, Index) are 100% optional.
+  - All other fields (Album, Duration, Track#, Genre, Index) are 100% optional and ignored during catalog matching.
+  - **Mandatory vs. Optional Fields Guide**:
+    - **Mandatory (Choose one identification path)**:
+      1. `Title` + `Artist` (German: `Titel` + `Interpret`, `Künstler`, `Band` / English: `Title` + `Artist`, `Track`, `Song`)
+      2. `ISRC` code
+      3. Direct numeric `tidal_id` / `id` (instant fast path from backup exports)
+    - **Optional (Kann-Felder)**: `Album`, `Duration` / `Dauer`, `Track #`, `Index`, `Genre`.
   - Automatically searches the TIDAL catalog for each row if direct track IDs are not provided.
   - Direct backup imports containing TIDAL IDs continue to use the instant fast path without catalog searches.
   - Full support for German column headers (`Titel`, `Interpret`, `Künstler`, `Band`, `Lied`, etc.) and English headers (`Title`, `Artist`, `Track`, `Song`).

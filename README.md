@@ -53,7 +53,10 @@ Manage in-platform playlists or transfer tracks across platforms in both directi
     - ✨ Create as a brand-new playlist
     - 📥 Append imported tracks directly into the playlist active in **Panel A**
     - 📥 Append imported tracks directly into the playlist active in **Panel B**
-  - **Flexible CSV / Text Matching**: Only **Title & Artist** (e.g. `Titel` & `Interpret` or `Title` & `Artist`) are required! All other columns (Album, Duration, Track#) are 100% optional. Supports German headers, semicolons (`;`), ISRC codes, and headerless text files with automated TIDAL catalog search.
+  - **Flexible CSV / Text Matching**:
+    - **Mandatory Fields (Muss-Felder)**: Only **Title & Artist** (e.g. `Titel` & `Interpret` or `Title` & `Artist`), an **ISRC** code, or direct **TIDAL IDs** are required!
+    - **Optional Fields (Optionale Felder)**: `Album`, `Duration` (`Dauer`), `Track #`, `Index`, and `Genre` are 100% optional and safely ignored.
+    - **Delimiters & German Excel**: Automatically detects commas (`,`), semicolons (`;`), and tabs (`\t`). Also supports headerless 2-column files and `Artist - Title` text lists with automated catalog search.
 - 🔀 **Playlist Merge & Cloud Shuffle**:
   - **Merge**: Combine multiple playlists into a unified master playlist (with optional automatic deduplication).
   - **Cloud Shuffle**: Randomize track ordering permanently in the cloud.
@@ -173,9 +176,63 @@ pip install --upgrade --no-cache-dir tidal-playlist-manager
 | **Clean Duplicates** | Click `Duplicates` in the playlist header. Inspect grouped duplicate copies and click `Clean Duplicates` to remove redundant tracks safely. |
 | **Remove Locally Available** | Click `📂 Remove Local` in the playlist header. Enter or select a folder path (e.g. `~/Music`), scan for matching audio files, and remove tracks you already have locally. |
 | **Backup & Export** | Click `Export`, select JSON, CSV, or M3U, and download your playlist backup. |
-| **Import** | Click `Import` in the top bar, upload a backup file, and choose whether to create a new playlist or append tracks directly into Panel A or Panel B. |
+| **Import** | Click `Import` in the top bar to create a playlist or append to Panel A/B. **Mandatory fields**: Only `Title` & `Artist` (or `Titel` & `Interpret` / `ISRC` / `TIDAL-ID`) are required; all other columns (Album, Duration, etc.) are optional. Supports CSV, TSV, JSON, and M3U. |
 | **Split Large Playlists** | Click `⚡ Split (>99)` to divide playlists with > 99 tracks into clean 99-track chunks (`... 1`, `... 2`). |
 | **Catalog Search & Preview** | Press `Cmd+K` to search millions of tracks. Click any track cover artwork for an instant 30-second audio preview. |
+
+---
+
+### 📥 Playlist Import Guide: Mandatory vs. Optional Fields
+
+When importing playlists from spreadsheets, text files, or other music services, **only Title and Artist are required**:
+
+| Field / Column | Status | Supported Headers (Case-Insensitive) | Description |
+|---|---|---|---|
+| **Title** | **Mandatory\*** | `Title`, `Titel`, `Track`, `Track Name`, `Song`, `Lied`, `Name` | Name of the song |
+| **Artist** | **Mandatory\*** | `Artist`, `Interpret`, `Künstler`, `Band`, `Performer` | Name of the artist or band |
+| **ISRC** | **Alternative\*** | `ISRC`, `ISRC-Code`, `isrc` | 12-character international track code |
+| **TIDAL ID** | **Alternative\*** | `tidal_id`, `track_id`, `id` | Direct TIDAL ID (fast-path from backup exports) |
+| **Album** | *Optional* | `Album`, `Album Name`, `Platte` | Informational only (safely ignored) |
+| **Duration** | *Optional* | `Duration`, `Dauer`, `Time`, `Length` | Informational only (safely ignored) |
+| **Track / Index** | *Optional* | `Index`, `Track #`, `Tracknr`, `Nr` | Informational only (safely ignored) |
+| **Genre / Year** | *Optional* | `Genre`, `Year`, `Jahr` | Informational only (safely ignored) |
+
+*\*Only **one** identification path is required: either (Title + Artist), or an ISRC code, or a direct TIDAL track ID.*
+
+#### Supported File Types & Examples
+
+1. **Standard Comma CSV (`Title,Artist`)**:
+   ```csv
+   Title,Artist
+   Blinding Lights,The Weeknd
+   Bohemian Rhapsody,Queen
+   ```
+
+2. **German Excel CSV with Semicolon (`;`) & Optional Columns**:
+   ```csv
+   Titel;Interpret;Album;Dauer
+   Summer in the City;The Lovin' Spoonful;Hums of the Lovin' Spoonful;2:40
+   Hotel California;Eagles;Hotel California;6:30
+   ```
+
+3. **Headerless 2-Column Text List**:
+   ```csv
+   Starboy, The Weeknd
+   Like a Prayer, Madonna
+   ```
+
+4. **Single-Column `Artist - Title` List**:
+   ```text
+   Daft Punk - Get Lucky
+   Kavinsky - Nightcall
+   ```
+
+5. **M3U / M3U8 Playlist**:
+   ```text
+   #EXTM3U
+   #EXTINF:210,Daft Punk - Get Lucky
+   music.mp3
+   ```
 
 ---
 
