@@ -336,6 +336,12 @@ def cmd_import(args: argparse.Namespace) -> None:
         title = args.title or in_path.stem
         res = client.import_playlist(title=title, file_content=content, format_type="auto")
         print(f"[SUCCESS] Imported playlist '{res['title']}' with {res['imported_tracks_count']} tracks (ID: {res['playlist_id']})")
+        if res.get("unmatched_count", 0) > 0:
+            print(f"[WARNING] {res['unmatched_count']} track(s) could not be found in TIDAL catalog:")
+            for item in res.get("unmatched_tracks", [])[:10]:
+                print(f"  - {item}")
+            if res.get("unmatched_count", 0) > 10:
+                print(f"  ... and {res['unmatched_count'] - 10} more.")
     except Exception as e:
         print(f"[ERROR] {e}")
         sys.exit(1)
@@ -469,7 +475,7 @@ def cmd_web(args: argparse.Namespace) -> None:
     url = f"http://{host}:{port}"
 
     print(f"\n=======================================================")
-    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.5.1")
+    print(f"  TIDAL & Spotify Playlist Manager Web UI v1.5.2")
     print(f"  Running at: {url}")
     print(f"  Press Ctrl+C to stop the server.")
     print(f"=======================================================\n")

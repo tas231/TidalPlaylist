@@ -53,6 +53,7 @@ Manage in-platform playlists or transfer tracks across platforms in both directi
     - ✨ Create as a brand-new playlist
     - 📥 Append imported tracks directly into the playlist active in **Panel A**
     - 📥 Append imported tracks directly into the playlist active in **Panel B**
+  - **Flexible CSV / Text Matching**: Only **Title & Artist** (e.g. `Titel` & `Interpret` or `Title` & `Artist`) are required! All other columns (Album, Duration, Track#) are 100% optional. Supports German headers, semicolons (`;`), ISRC codes, and headerless text files with automated TIDAL catalog search.
 - 🔀 **Playlist Merge & Cloud Shuffle**:
   - **Merge**: Combine multiple playlists into a unified master playlist (with optional automatic deduplication).
   - **Cloud Shuffle**: Randomize track ordering permanently in the cloud.

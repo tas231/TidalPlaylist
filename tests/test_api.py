@@ -213,6 +213,29 @@ class TestApiEndpoints(unittest.TestCase):
             self.assertEqual(res_legacy.status_code, 200)
             self.assertEqual(res_legacy.json()["removed_count"], 2)
 
+    def test_import_playlist_endpoint(self):
+        with patch.object(client, "is_logged_in", return_value=True), \
+             patch.object(client, "import_playlist", return_value={
+                 "success": True,
+                 "playlist_id": "pl-new",
+                 "title": "Imported Title",
+                 "imported_tracks_count": 5,
+                 "unmatched_count": 0,
+                 "mode": "created",
+             }):
+            res = self.api_client.post(
+                "/api/playlists/import",
+                json={
+                    "title": "Imported Title",
+                    "content": "Titel,Interpret\nSong 1,Artist 1\n",
+                    "format_type": "auto",
+                },
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["imported_tracks_count"], 5)
+
 
 if __name__ == "__main__":
     unittest.main()

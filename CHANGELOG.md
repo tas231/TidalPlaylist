@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-11-14
+
+### Added
+- **Flexible CSV / Text Import with Title & Artist Catalog Matching**:
+  - CSV files now only require **Title & Artist** (e.g. `Titel` & `Interpret` or `Title` & `Artist`) to import playlists.
+  - All other fields (Album, Duration, Track#, Genre, Index) are 100% optional.
+  - Automatically searches the TIDAL catalog for each row if direct track IDs are not provided.
+  - Direct backup imports containing TIDAL IDs continue to use the instant fast path without catalog searches.
+  - Full support for German column headers (`Titel`, `Interpret`, `Künstler`, `Band`, `Lied`, etc.) and English headers (`Title`, `Artist`, `Track`, `Song`).
+  - Automatic delimiter detection for comma (`,`), semicolon (`;` as used in German Excel), and tab (`\t`).
+  - Support for headerless 2-column CSVs (`Title, Artist` or `Artist, Title`) and 1-column `Artist - Title` lists.
+  - Support for ISRC codes in CSV/JSON.
+  - Enhanced M3U/M3U8 import to resolve `#EXTINF` metadata via catalog search.
+  - Added unmatched track count and warning feedback in the Web UI and CLI.
+  - Added helpful format guidance note directly in the Import modal.
+
 ## [1.5.1] - 2026-11-14
 
 ### Added

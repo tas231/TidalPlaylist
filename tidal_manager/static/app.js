@@ -1782,9 +1782,20 @@ async function submitImportPlaylist() {
       }),
     });
 
+    let msg = res.mode === "appended"
+      ? `Successfully added ${res.imported_tracks_count} tracks to '${res.title}'!`
+      : `Successfully created playlist '${res.title}' with ${res.imported_tracks_count} tracks!`;
+
+    if (res.unmatched_count > 0) {
+      msg += ` (${res.unmatched_count} not found in catalog)`;
+      showToast(msg, "warning", 6000);
+    } else {
+      showToast(msg, "success", 4000);
+    }
+
+    closeModal(el.modalImport);
+
     if (res.mode === "appended") {
-      showToast(`Successfully added ${res.imported_tracks_count} tracks to '${res.title}'!`, "success");
-      closeModal(el.modalImport);
       if (dest === "paneA") {
         await loadPlaylistDetails("paneA", targetId);
       } else {
@@ -1792,8 +1803,6 @@ async function submitImportPlaylist() {
       }
       await refreshDropdownCounts();
     } else {
-      showToast(`Successfully created playlist '${res.title}' with ${res.imported_tracks_count} tracks!`, "success");
-      closeModal(el.modalImport);
       await loadPlaylists();
 
       if (!state.paneA.playlistId) {

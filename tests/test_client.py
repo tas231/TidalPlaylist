@@ -1,5 +1,6 @@
 """Unit tests for TidalClient and playlist splitting logic."""
 
+import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -290,6 +291,81 @@ class TestTidalClient(unittest.TestCase):
         self.assertTrue(imp_append_res["success"])
         self.assertEqual(imp_append_res["mode"], "appended")
         self.assertEqual(imp_append_res["playlist_id"], "pl-target")
+
+    def test_import_csv_title_artist_search(self):
+        """Test importing CSV with only Title and Artist columns matching via catalog search."""
+        csv_data = "Title,Artist\nBlinding Lights,The Weeknd\nStarboy,The Weeknd\n"
+        self.client.create_playlist = MagicMock(return_value={"id": "pl-new", "name": "Imported Playlist"})
+        self.client.add_tracks = MagicMock(return_value=["10", "20"])
+
+        def mock_search(isrc=None, title=None, artist=None):
+            if "Blinding" in (title or ""):
+                return {"id": "10", "name": "Blinding Lights", "artist": "The Weeknd"}
+            if "Starboy" in (title or ""):
+                return {"id": "20", "name": "Starboy", "artist": "The Weeknd"}
+            return None
+
+        self.client.search_track = MagicMock(side_effect=mock_search)
+
+        res = self.client.import_playlist("My Title Artist Import", csv_data, "csv")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["imported_tracks_count"], 2)
+        self.assertEqual(res["unmatched_count"], 0)
+        self.assertEqual(res["playlist_id"], "pl-new")
+
+    def test_import_csv_german_headers_semicolon(self):
+        """Test importing German Excel CSV with semicolon and optional fields (Album, Dauer)."""
+        csv_data = "Titel;Interpret;Album;Dauer\nBohemian Rhapsody;Queen;A Night at the Opera;5:55\n"
+        self.client.create_playlist = MagicMock(return_value={"id": "pl-ger", "name": "German Import"})
+        self.client.add_tracks = MagicMock(return_value=["999"])
+        self.client.search_track = MagicMock(return_value={"id": "999", "name": "Bohemian Rhapsody", "artist": "Queen"})
+
+        res = self.client.import_playlist("German Import", csv_data, "auto")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["imported_tracks_count"], 1)
+        self.assertEqual(res["playlist_id"], "pl-ger")
+
+    def test_import_csv_headerless_two_columns(self):
+        """Test importing headerless 2-column CSV (Title, Artist)."""
+        csv_data = "Hotel California,Eagles\n"
+        self.client.create_playlist = MagicMock(return_value={"id": "pl-hless", "name": "Headerless"})
+        self.client.add_tracks = MagicMock(return_value=["777"])
+        self.client.search_track = MagicMock(return_value={"id": "777", "name": "Hotel California", "artist": "Eagles"})
+
+        res = self.client.import_playlist("Headerless", csv_data, "csv")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["imported_tracks_count"], 1)
+
+    def test_import_json_title_artist(self):
+        """Test importing JSON with title and artist objects."""
+        json_data = json.dumps([
+            {"titel": "Song One", "künstler": "Artist One"},
+            {"title": "Song Two", "artist": "Artist Two"}
+        ])
+        self.client.create_playlist = MagicMock(return_value={"id": "pl-json", "name": "JSON Import"})
+        self.client.add_tracks = MagicMock(return_value=["1", "2"])
+        self.client.search_track = MagicMock(side_effect=lambda **kw: {"id": "1", "name": kw.get("title")})
+
+        res = self.client.import_playlist("JSON Import", json_data, "json")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["imported_tracks_count"], 2)
+
+    def test_import_m3u_extinf(self):
+        """Test importing M3U with #EXTINF Artist - Title."""
+        m3u_data = "#EXTM3U\n#EXTINF:210,Daft Punk - Get Lucky\n/music/daft.mp3\n"
+        self.client.create_playlist = MagicMock(return_value={"id": "pl-m3u", "name": "M3U Import"})
+        self.client.add_tracks = MagicMock(return_value=["456"])
+        self.client.search_track = MagicMock(return_value={"id": "456", "name": "Get Lucky", "artist": "Daft Punk"})
+
+        res = self.client.import_playlist("M3U Import", m3u_data, "m3u")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["imported_tracks_count"], 1)
+
+    def test_import_no_tracks_raises(self):
+        """Test error raised when no tracks match or file is empty."""
+        from tidal_manager.client import TidalManagerError
+        with self.assertRaises(TidalManagerError):
+            self.client.import_playlist("Empty", "", "csv")
 
     def test_merge_playlists(self):
         t1 = DummyTrack(1, "Track 1")

@@ -773,62 +773,253 @@ class TidalClient:
         description: str = "Imported via TIDAL Playlist Manager",
         target_playlist_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Import tracks from JSON, CSV, or M3U, creating a new playlist or appending to an existing one."""
-        raw = file_content.strip()
-        track_ids: List[str] = []
+        """Import tracks from JSON, CSV, or M3U, creating a new playlist or appending to an existing one.
+
+        Supports:
+        - Full backups with TIDAL track IDs (direct lookup)
+        - Spreadsheets or text files with Title & Artist (automatic TIDAL catalog search)
+        - ISRC codes
+        - Flexible delimiters (comma, semicolon, tab)
+        - English & German column headers (Titel, Interpret, Künstler, Band, Song, etc.)
+        """
+        raw = file_content.strip().lstrip("\ufeff")
+        candidates: List[Dict[str, Any]] = []
         parsed_title = title or "Imported Playlist"
 
         if format_type == "auto":
             if raw.startswith("{") or raw.startswith("["):
                 format_type = "json"
-            elif raw.startswith("#EXTM3U"):
+            elif raw.startswith("#EXTM3U") or raw.startswith("#EXTINF"):
                 format_type = "m3u"
             else:
                 format_type = "csv"
 
         if format_type == "json":
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except Exception as e:
+                raise TidalManagerError(f"Invalid JSON content: {e}")
+
+            raw_items = []
             if isinstance(data, dict):
                 parsed_title = title or data.get("playlist", {}).get("name") or data.get("title") or parsed_title
-                tracks = data.get("tracks", [])
-                for t in tracks:
-                    if isinstance(t, dict) and t.get("id"):
-                        track_ids.append(str(t["id"]))
+                raw_items = data.get("tracks", [])
             elif isinstance(data, list):
-                for item in data:
-                    if isinstance(item, dict) and item.get("id"):
-                        track_ids.append(str(item["id"]))
+                raw_items = data
+
+            for item in raw_items:
+                if isinstance(item, dict):
+                    id_val = str(item.get("id") or item.get("tidal_id") or item.get("track_id") or "").strip()
+                    isrc_val = str(item.get("isrc") or "").strip()
+                    title_val = str(
+                        item.get("title") or item.get("titel") or item.get("name") or item.get("track") or ""
+                    ).strip()
+                    artist_obj = (
+                        item.get("artist")
+                        or item.get("artists")
+                        or item.get("interpret")
+                        or item.get("künstler")
+                        or item.get("kuenstler")
+                        or ""
+                    )
+                    if isinstance(artist_obj, dict):
+                        artist_val = str(artist_obj.get("name") or "").strip()
+                    elif isinstance(artist_obj, list):
+                        artist_val = ", ".join(
+                            str(a.get("name") if isinstance(a, dict) else a) for a in artist_obj
+                        ).strip()
+                    else:
+                        artist_val = str(artist_obj).strip()
+
+                    candidates.append({
+                        "id": id_val,
+                        "isrc": isrc_val,
+                        "title": title_val,
+                        "artist": artist_val,
+                    })
+                elif isinstance(item, (int, str)):
+                    candidates.append({
+                        "id": str(item).strip(),
+                        "isrc": "",
+                        "title": "",
+                        "artist": "",
+                    })
 
         elif format_type == "m3u":
             lines = raw.splitlines()
+            last_extinf_title = ""
+            last_extinf_artist = ""
             for line in lines:
                 line = line.strip()
+                if not line:
+                    continue
                 if line.startswith("#TIDAL-ID:"):
                     tid = line.replace("#TIDAL-ID:", "").strip()
                     if tid:
-                        track_ids.append(tid)
+                        candidates.append({"id": tid, "isrc": "", "title": "", "artist": ""})
+                    last_extinf_title = ""
+                    last_extinf_artist = ""
                 elif "listen.tidal.com/track/" in line:
                     match = re.search(r"track/(\d+)", line)
                     if match:
-                        track_ids.append(match.group(1))
+                        candidates.append({"id": match.group(1), "isrc": "", "title": "", "artist": ""})
+                    last_extinf_title = ""
+                    last_extinf_artist = ""
+                elif line.startswith("#EXTINF:"):
+                    info = line.split(",", 1)
+                    if len(info) > 1:
+                        meta = info[1].strip()
+                        if " - " in meta:
+                            parts = meta.split(" - ", 1)
+                            last_extinf_artist = parts[0].strip()
+                            last_extinf_title = parts[1].strip()
+                        else:
+                            last_extinf_artist = ""
+                            last_extinf_title = meta
+                elif not line.startswith("#"):
+                    if last_extinf_title:
+                        candidates.append({
+                            "id": "",
+                            "isrc": "",
+                            "title": last_extinf_title,
+                            "artist": last_extinf_artist,
+                        })
+                        last_extinf_title = ""
+                        last_extinf_artist = ""
+                    else:
+                        base = os.path.splitext(os.path.basename(line))[0]
+                        if " - " in base:
+                            parts = base.split(" - ", 1)
+                            candidates.append({
+                                "id": "",
+                                "isrc": "",
+                                "title": parts[1].strip(),
+                                "artist": parts[0].strip(),
+                            })
+                        else:
+                            candidates.append({
+                                "id": "",
+                                "isrc": "",
+                                "title": base,
+                                "artist": "",
+                            })
 
         elif format_type == "csv":
-            reader = csv.reader(io.StringIO(raw))
-            rows = list(reader)
-            if rows:
-                header = [h.strip().lower() for h in rows[0]]
-                id_col = -1
-                for candidate in ["tidal_id", "tidal id", "track_id", "id"]:
-                    if candidate in header:
-                        id_col = header.index(candidate)
-                        break
+            sample_lines = [l for l in raw.splitlines() if l.strip()]
+            delimiter = ","
+            if sample_lines:
+                first_line = sample_lines[0]
+                if "\t" in first_line and first_line.count("\t") >= first_line.count(","):
+                    delimiter = "\t"
+                elif ";" in first_line and first_line.count(";") >= first_line.count(","):
+                    delimiter = ";"
 
-                for row in rows[1:]:
-                    if id_col != -1 and len(row) > id_col and row[id_col].strip().isdigit():
-                        track_ids.append(row[id_col].strip())
+            reader = csv.reader(io.StringIO(raw), delimiter=delimiter)
+            rows = [r for r in reader if any(cell.strip() for cell in r)]
+            if rows:
+                def _norm(c: str) -> str:
+                    return re.sub(r"[_\-\s]+", " ", c.strip().lower())
+
+                first_row_norm = [_norm(c) for c in rows[0]]
+
+                id_synonyms = {
+                    "tidal id", "tidal_id", "track id", "track_id", "id", "spotify id", "spotify_id",
+                    "song id", "item id", "trackid", "tidalid"
+                }
+                isrc_synonyms = {
+                    "isrc", "isrc code", "isrc_code", "isrc-code", "isrcnummer"
+                }
+                title_synonyms = {
+                    "title", "titel", "titelname", "track", "track title", "track name", "track_name",
+                    "song", "song title", "song name", "song_name", "name", "lied", "liedtitel", "liedname"
+                }
+                artist_synonyms = {
+                    "artist", "artists", "artist name", "artist_name", "interpret", "interpreten",
+                    "künstler", "kuenstler", "band", "performer", "musiker", "author"
+                }
+
+                id_col = -1
+                isrc_col = -1
+                title_col = -1
+                artist_col = -1
+
+                for idx, col in enumerate(first_row_norm):
+                    if id_col == -1 and col in id_synonyms:
+                        id_col = idx
+                    elif isrc_col == -1 and col in isrc_synonyms:
+                        isrc_col = idx
+                    elif title_col == -1 and col in title_synonyms:
+                        title_col = idx
+                    elif artist_col == -1 and col in artist_synonyms:
+                        artist_col = idx
+
+                has_header = any(c != -1 for c in (id_col, isrc_col, title_col, artist_col))
+                data_rows = rows[1:] if has_header else rows
+
+                if not has_header:
+                    if len(rows[0]) == 2:
+                        title_col = 0
+                        artist_col = 1
+                    elif len(rows[0]) == 1:
+                        title_col = 0
+
+                for row in data_rows:
+                    id_val = row[id_col].strip() if id_col != -1 and len(row) > id_col else ""
+                    isrc_val = row[isrc_col].strip() if isrc_col != -1 and len(row) > isrc_col else ""
+                    title_val = row[title_col].strip() if title_col != -1 and len(row) > title_col else ""
+                    artist_val = row[artist_col].strip() if artist_col != -1 and len(row) > artist_col else ""
+
+                    if not artist_val and " - " in title_val:
+                        parts = title_val.split(" - ", 1)
+                        artist_val = parts[0].strip()
+                        title_val = parts[1].strip()
+
+                    candidates.append({
+                        "id": id_val,
+                        "isrc": isrc_val,
+                        "title": title_val,
+                        "artist": artist_val,
+                        "_headerless": not has_header,
+                    })
+
+        track_ids: List[str] = []
+        unmatched: List[str] = []
+
+        for cand in candidates:
+            id_val = cand.get("id", "").strip()
+            isrc_val = cand.get("isrc", "").strip()
+            title_val = cand.get("title", "").strip()
+            artist_val = cand.get("artist", "").strip()
+            is_headerless = cand.get("_headerless", False)
+
+            # 1. Direct TIDAL numeric ID
+            if id_val and id_val.isdigit():
+                track_ids.append(id_val)
+                continue
+
+            # 2. Search catalog by ISRC, or Title + Artist
+            if isrc_val or title_val:
+                matched = self.search_track(isrc=isrc_val or None, title=title_val or None, artist=artist_val or None)
+                if not matched and is_headerless and title_val and artist_val:
+                    # In headerless 2-column CSV, try swapping Artist and Title
+                    matched = self.search_track(title=artist_val, artist=title_val)
+
+                if matched and matched.get("id"):
+                    track_ids.append(str(matched["id"]))
+                    continue
+
+            # Unmatched item
+            desc = f"{artist_val} - {title_val}" if (artist_val and title_val) else (title_val or artist_val or isrc_val or id_val)
+            if desc:
+                unmatched.append(desc)
 
         if not track_ids:
-            raise TidalManagerError("No valid TIDAL track IDs could be found in the imported file.")
+            if unmatched:
+                raise TidalManagerError(
+                    f"Could not find matching TIDAL tracks for {len(unmatched)} item(s) in catalog. "
+                    f"(First unmatched: '{unmatched[0]}')"
+                )
+            raise TidalManagerError("No valid TIDAL track IDs, titles, or artists could be found in the imported file.")
 
         if target_playlist_id:
             target_pl = self.get_playlist_obj(target_playlist_id)
@@ -838,6 +1029,8 @@ class TidalClient:
                 "playlist_id": target_playlist_id,
                 "title": target_pl.name,
                 "imported_tracks_count": len(track_ids),
+                "unmatched_count": len(unmatched),
+                "unmatched_tracks": unmatched[:50],
                 "mode": "appended",
             }
 
@@ -850,6 +1043,8 @@ class TidalClient:
             "playlist_id": new_id,
             "title": parsed_title,
             "imported_tracks_count": len(track_ids),
+            "unmatched_count": len(unmatched),
+            "unmatched_tracks": unmatched[:50],
             "mode": "created",
         }
 
