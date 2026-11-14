@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-11-14
+
+### Added
+- **Allow Selecting Original Track for Deletion**:
+  - The first/original track occurrence in each duplicate group now features an interactive checkbox just like duplicates.
+  - Defaults to unchecked (`✓ Keeping (Original)`), but can be checked directly by the user to mark the original for deletion (`🗑 Remove (Original)`).
+  - Clicking "Keep this instead" on any duplicate now instantly marks the original for deletion and keeps that duplicate.
+  - Added warning badge `⚠️ All copies will be removed` if every track in a duplicate group is selected for deletion.
+
 ## [1.5.0] - 2026-11-14
 
 ### Added

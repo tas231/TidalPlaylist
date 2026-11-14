@@ -1458,19 +1458,14 @@ body {
   transition: all 0.15s ease;
 }
 
-.dup-item-orig {
+.dup-item.dup-unchecked-keep {
   border-color: rgba(34, 197, 94, 0.25);
   background-color: rgba(34, 197, 94, 0.05);
 }
 
-.dup-item-duplicate.dup-checked-remove {
+.dup-item.dup-checked-remove {
   border-color: rgba(239, 68, 68, 0.25);
   background-color: rgba(239, 68, 68, 0.05);
-}
-
-.dup-item-duplicate.dup-unchecked-keep {
-  border-color: rgba(34, 197, 94, 0.25);
-  background-color: rgba(34, 197, 94, 0.05);
 }
 
 .dup-item-left {

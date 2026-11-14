@@ -1337,10 +1337,11 @@ function renderDuplicatesGroups(groups) {
     // Original track row
     if (orig) {
       const origRow = document.createElement("div");
-      origRow.className = "dup-item dup-item-orig";
+      origRow.className = "dup-item dup-item-orig dup-unchecked-keep";
+      origRow.setAttribute("data-index", orig.index);
       origRow.innerHTML = `
         <div class="dup-item-left">
-          <span class="dup-keep-icon" title="Kept original copy">✓</span>
+          <input type="checkbox" class="dup-checkbox" data-index="${orig.index}" title="Check to remove original, uncheck to keep this version">
           <div class="dup-item-details">
             <div class="dup-item-title-line">
               <span class="dup-item-index">#${orig.index + 1}</span>
@@ -1351,15 +1352,32 @@ function renderDuplicatesGroups(groups) {
           </div>
         </div>
         <div class="dup-item-right">
-          <span class="badge-status-pill badge-keep">Original (Kept)</span>
+          <span class="badge-status-pill badge-keep" id="dup-badge-${orig.index}">✓ Keeping (Original)</span>
         </div>
       `;
+
+      const origCb = origRow.querySelector(".dup-checkbox");
+      origCb.addEventListener("change", () => {
+        const badge = origRow.querySelector(".badge-status-pill");
+        if (origCb.checked) {
+          origRow.classList.remove("dup-unchecked-keep");
+          origRow.classList.add("dup-checked-remove");
+          badge.className = "badge-status-pill badge-remove";
+          badge.textContent = "🗑 Remove (Original)";
+        } else {
+          origRow.classList.remove("dup-checked-remove");
+          origRow.classList.add("dup-unchecked-keep");
+          badge.className = "badge-status-pill badge-keep";
+          badge.textContent = "✓ Keeping (Original)";
+        }
+        updateDuplicatesSubmitButton();
+      });
+
       tracksContainer.appendChild(origRow);
     }
 
     // Duplicate rows
-    dups.forEach((dup, dupOffset) => {
-      const dupIndexInGrp = dupOffset + 1;
+    dups.forEach((dup) => {
       const row = document.createElement("div");
       row.className = "dup-item dup-item-duplicate dup-checked-remove";
       row.setAttribute("data-index", dup.index);
@@ -1377,7 +1395,7 @@ function renderDuplicatesGroups(groups) {
           </div>
         </div>
         <div class="dup-item-right">
-          <button type="button" class="btn btn-ghost btn-xs btn-swap-dup" title="Keep this version and mark the other as duplicate">Keep this instead</button>
+          <button type="button" class="btn btn-ghost btn-xs btn-swap-dup" title="Keep this version and mark original for removal">Keep this instead</button>
           <span class="badge-status-pill badge-remove" id="dup-badge-${dup.index}">🗑 Remove</span>
         </div>
       `;
@@ -1403,15 +1421,35 @@ function renderDuplicatesGroups(groups) {
       // Swap button listener
       const btnSwap = row.querySelector(".btn-swap-dup");
       btnSwap.addEventListener("click", () => {
-        // Swap grp.tracks[0] and dup
-        const currentOrig = grp.tracks[0];
-        grp.tracks[0] = dup;
-        grp.tracks[dupIndexInGrp] = currentOrig;
-        grp.tracks[0].is_duplicate = false;
-        grp.tracks[dupIndexInGrp].is_duplicate = true;
-        renderDuplicatesGroups(currentDuplicatesGroups);
+        // Keep this duplicate and mark original for removal
+        cb.checked = false;
+        row.classList.remove("dup-checked-remove");
+        row.classList.add("dup-unchecked-keep");
+        const dupBadge = row.querySelector(".badge-status-pill");
+        if (dupBadge) {
+          dupBadge.className = "badge-status-pill badge-keep";
+          dupBadge.textContent = "✓ Keeping";
+        }
+
+        const origRow = card.querySelector(".dup-item-orig");
+        if (origRow) {
+          const origCb = origRow.querySelector(".dup-checkbox");
+          if (origCb) {
+            origCb.checked = true;
+            origRow.classList.remove("dup-unchecked-keep");
+            origRow.classList.add("dup-checked-remove");
+            const origBadge = origRow.querySelector(".badge-status-pill");
+            if (origBadge) {
+              origBadge.className = "badge-status-pill badge-remove";
+              origBadge.textContent = "🗑 Remove (Original)";
+            }
+          }
+        }
+
         updateDuplicatesSubmitButton();
-        showToast(`Swapped: Now keeping #${dup.index + 1} (${dup.name})`, "info");
+        if (orig) {
+          showToast(`Keeping #${dup.index + 1} (${dup.name}) and removing original #${orig.index + 1}`, "info");
+        }
       });
 
       tracksContainer.appendChild(row);
@@ -1429,17 +1467,33 @@ function updateDuplicatesSubmitButton() {
 
   el.dupBadgeCount.textContent = `${count} Selected`;
 
+  // Update group header warnings if all copies in a group are checked
+  el.duplicatesList.querySelectorAll(".dup-group-card").forEach((card) => {
+    const cardBoxes = card.querySelectorAll(".dup-checkbox");
+    const cardChecked = card.querySelectorAll(".dup-checkbox:checked");
+    const countBadge = card.querySelector(".dup-group-count");
+    if (countBadge) {
+      if (cardBoxes.length > 0 && cardBoxes.length === cardChecked.length) {
+        countBadge.textContent = "⚠️ All copies marked for removal";
+        countBadge.style.color = "var(--danger)";
+      } else {
+        countBadge.textContent = `${cardBoxes.length} copies in playlist`;
+        countBadge.style.color = "";
+      }
+    }
+  });
+
   if (count === 0) {
     el.btnSubmitCleanDups.disabled = true;
-    el.btnSubmitCleanDups.textContent = "Remove Selected Duplicates";
+    el.btnSubmitCleanDups.textContent = "Remove Selected";
     if (el.dupSelectedSummary) {
-      el.dupSelectedSummary.textContent = "0 duplicates selected (all versions will be kept)";
+      el.dupSelectedSummary.textContent = "0 tracks selected (all versions will be kept)";
     }
   } else {
     el.btnSubmitCleanDups.disabled = false;
-    el.btnSubmitCleanDups.textContent = `Remove ${count} Selected Duplicate${count > 1 ? "s" : ""}`;
+    el.btnSubmitCleanDups.textContent = `Remove ${count} Selected Track${count > 1 ? "s" : ""}`;
     if (el.dupSelectedSummary) {
-      el.dupSelectedSummary.textContent = `${count} of ${totalBoxes} duplicates selected for removal`;
+      el.dupSelectedSummary.textContent = `${count} of ${totalBoxes} tracks selected for removal`;
     }
   }
 }
@@ -2412,25 +2466,42 @@ function setupEventListeners() {
   el.btnSubmitCleanDups.addEventListener("click", submitCleanDuplicates);
   if (el.btnDupSelectAll) {
     el.btnDupSelectAll.addEventListener("click", () => {
-      el.duplicatesList.querySelectorAll(".dup-item-duplicate").forEach((row) => {
-        const cb = row.querySelector(".dup-checkbox");
-        if (cb) {
-          cb.checked = true;
-          row.classList.remove("dup-unchecked-keep");
-          row.classList.add("dup-checked-remove");
-          const badge = row.querySelector(".badge-status-pill");
-          if (badge) {
-            badge.className = "badge-status-pill badge-remove";
-            badge.textContent = "🗑 Remove";
+      // Select all duplicate tracks for removal, keeping originals unchecked
+      el.duplicatesList.querySelectorAll(".dup-group-card").forEach((card) => {
+        const origRow = card.querySelector(".dup-item-orig");
+        if (origRow) {
+          const origCb = origRow.querySelector(".dup-checkbox");
+          if (origCb) {
+            origCb.checked = false;
+            origRow.classList.remove("dup-checked-remove");
+            origRow.classList.add("dup-unchecked-keep");
+            const badge = origRow.querySelector(".badge-status-pill");
+            if (badge) {
+              badge.className = "badge-status-pill badge-keep";
+              badge.textContent = "✓ Keeping (Original)";
+            }
           }
         }
+        card.querySelectorAll(".dup-item-duplicate").forEach((row) => {
+          const cb = row.querySelector(".dup-checkbox");
+          if (cb) {
+            cb.checked = true;
+            row.classList.remove("dup-unchecked-keep");
+            row.classList.add("dup-checked-remove");
+            const badge = row.querySelector(".badge-status-pill");
+            if (badge) {
+              badge.className = "badge-status-pill badge-remove";
+              badge.textContent = "🗑 Remove";
+            }
+          }
+        });
       });
       updateDuplicatesSubmitButton();
     });
   }
   if (el.btnDupDeselectAll) {
     el.btnDupDeselectAll.addEventListener("click", () => {
-      el.duplicatesList.querySelectorAll(".dup-item-duplicate").forEach((row) => {
+      el.duplicatesList.querySelectorAll(".dup-item").forEach((row) => {
         const cb = row.querySelector(".dup-checkbox");
         if (cb) {
           cb.checked = false;
@@ -2439,7 +2510,8 @@ function setupEventListeners() {
           const badge = row.querySelector(".badge-status-pill");
           if (badge) {
             badge.className = "badge-status-pill badge-keep";
-            badge.textContent = "✓ Keeping";
+            const isOrig = row.classList.contains("dup-item-orig");
+            badge.textContent = isOrig ? "✓ Keeping (Original)" : "✓ Keeping";
           }
         }
       });
